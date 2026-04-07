@@ -1,0 +1,51 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="1200" height="630" fill="#F8FAFC"/>
+  
+  <!-- Decorative Elements -->
+  <circle cx="1100" cy="100" r="200" fill="#EEF2FF"/>
+  <circle cx="100" cy="530" r="150" fill="#EEF2FF"/>
+  
+  <!-- Logo Section -->
+  <g transform="translate(80, 80)">
+    <rect width="100" height="100" rx="20" fill="#4F46E5"/>
+    <path d="M30 70V30H50C55.5228 30 60 34.4772 60 40C60 45.5228 55.5228 50 50 50H30M50 50L70 70" stroke="white" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="70" cy="30" r="8" fill="#818CF8"/>
+  </g>
+  
+  <!-- Brand Name -->
+  <text x="200" y="150" fill="#0F172A" font-family="Arial, sans-serif" font-size="64" font-weight="800">PayGlobe</text>
+  
+  <!-- Title - Fixed size and wrapping to prevent overlap -->
+  <text x="80" y="290" fill="#0F172A" font-family="Arial, sans-serif" font-size="64" font-weight="800">
+    <tspan x="80" dy="0">Global Payroll</tspan>
+    <tspan x="80" dy="70">Intelligence</tspan>
+    <tspan x="80" dy="70">Platform</tspan>
+  </text>
+  
+  <!-- Description - Fixed size and wrapping -->
+  <text x="80" y="500" fill="#64748B" font-family="Arial, sans-serif" font-size="28" font-weight="400">
+    <tspan x="80" dy="0">Automated compliance and intelligent</tspan>
+    <tspan x="80" dy="40">rule engines for global operations.</tspan>
+  </text>
+  
+  <!-- Badge -->
+  <rect x="80" y="565" width="240" height="40" rx="20" fill="#4F46E5" fill-opacity="0.1"/>
+  <text x="105" y="591" fill="#4F46E5" font-family="Arial, sans-serif" font-size="18" font-weight="700">VERSION 2.0 READY</text>
+  
+  <!-- Abstract UI Elements - Moved further right (x=780) -->
+  <g transform="translate(780, 150)">
+    <rect width="360" height="330" rx="16" fill="white" stroke="#E2E8F0" stroke-width="2" />
+    <rect x="30" y="30" width="120" height="24" rx="12" fill="#F1F5F9" />
+    <rect x="30" y="80" width="300" height="40" rx="8" fill="#F8FAFC" stroke="#F1F5F9" />
+    <rect x="30" y="135" width="300" height="40" rx="8" fill="#F8FAFC" stroke="#F1F5F9" />
+    <rect x="30" y="190" width="300" height="40" rx="8" fill="#F8FAFC" stroke="#F1F5F9" />
+    
+    <rect x="50" y="92" width="60" height="16" rx="8" fill="#4F46E5" fill-opacity="0.2" />
+    <rect x="50" y="147" width="100" height="16" rx="8" fill="#10B981" fill-opacity="0.2" />
+    <rect x="50" y="202" width="80" height="16" rx="8" fill="#F59E0B" fill-opacity="0.2" />
+  </g>
+  
+  <!-- Bottom Accent -->
+  <rect y="620" width="1200" height="10" fill="#4F46E5"/>
+</svg>

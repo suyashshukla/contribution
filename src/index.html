@@ -2,58 +2,136 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>PayGlobe - Global Payroll Intelligence Platform</title>
+  <title>PayGlobe | Global Payroll Intelligence</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   
   <!-- Primary Meta Tags -->
-  <meta name="title" content="PayGlobe - Global Payroll Intelligence Platform">
-  <meta name="description" content="Configure countries, rules, and geo groups for intelligent global payroll processing. Manage payroll calculations across multiple countries with ease.">
-  <meta name="keywords" content="payroll, global payroll, payroll intelligence, country configuration, payroll rules, geo groups, payroll processing">
-  <meta name="author" content="PayGlobe">
-  <meta name="robots" content="index, follow">
-  
+  <meta name="title" content="PayGlobe | Global Payroll Intelligence">
+  <meta name="description" content="The ultimate command center for global payroll. Intelligent country configuration, automated rule engines, and advanced geo-grouping for seamless cross-border operations.">
+  <meta name="keywords" content="global payroll, payroll automation, payroll intelligence, fintech, compliance, geo-groups, payroll rules">
+  <meta name="author" content="PayGlobe Intelligence">
+  <meta name="theme-color" content="#4f46e5">
+
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://payroll.codiebe.com">
-  <meta property="og:title" content="PayGlobe - Global Payroll Intelligence Platform">
-  <meta property="og:description" content="Configure countries, rules, and geo groups for intelligent global payroll processing. Manage payroll calculations across multiple countries with ease.">
-  <meta property="og:image" content="https://payroll.codiebe.com/og-image.png">
-  <meta property="og:image:width" content="1200">
-  <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="PayGlobe - Global Payroll Intelligence Platform">
-  <meta property="og:site_name" content="PayGlobe">
-  <meta property="og:locale" content="en_US">
-  
+  <meta property="og:title" content="PayGlobe | Global Payroll Intelligence">
+  <meta property="og:description" content="Streamline your global payroll operations with intelligent configuration and automated rule engines.">
+  <meta property="og:image" content="https://payroll.codiebe.com/social-image.png">
+  <meta property="og:image:alt" content="PayGlobe Global Payroll Intelligence Dashboard">
+
   <!-- Twitter -->
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:url" content="https://payroll.codiebe.com/">
-  <meta name="twitter:title" content="PayGlobe - Global Payroll Intelligence Platform">
-  <meta name="twitter:description" content="Configure countries, rules, and geo groups for intelligent global payroll processing. Manage payroll calculations across multiple countries with ease.">
-  <meta name="twitter:image" content="https://payroll.codiebe.com/og-image.png">
-  <meta name="twitter:image:alt" content="PayGlobe - Global Payroll Intelligence Platform">
-  
+  <meta name="twitter:title" content="PayGlobe | Global Payroll Intelligence">
+  <meta name="twitter:description" content="The ultimate command center for global payroll.">
+  <meta name="twitter:image" content="https://payroll.codiebe.com/social-image.png">
+
   <!-- Favicons -->
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <link rel="apple-touch-icon" sizes="192x192" href="logo-192.png">
-  <link rel="icon" type="image/png" sizes="192x192" href="logo-192.png">
-  <link rel="icon" type="image/png" sizes="512x512" href="logo-512.png">
+  <link rel="apple-touch-icon" href="favicon.svg">
   
-  <!-- Web App Manifest -->
-  <link rel="manifest" href="manifest.json">
-  
-  <!-- Theme Color -->
-  <meta name="theme-color" content="#6366f1">
-  <meta name="msapplication-TileColor" content="#6366f1">
-  <meta name="msapplication-TileImage" content="logo-192.png">
-  
-  <!-- Apple Web App -->
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="PayGlobe">
+  <style>
+    :root {
+      --pg-primary: #4f46e5;
+      --pg-bg: #f8fafc;
+    }
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background-color: var(--pg-bg);
+      font-family: 'Manrope', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    #splash-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background-color: var(--pg-bg);
+      z-index: 99999;
+      transition: opacity 0.5s ease-out, visibility 0.5s;
+    }
+    .splash-logo {
+      width: 80px;
+      height: 80px;
+      margin-bottom: 24px;
+      animation: splash-pulse 2s infinite ease-in-out;
+    }
+    .splash-text {
+      font-size: 24px;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: -0.025em;
+      margin-bottom: 8px;
+      opacity: 0;
+      animation: splash-fade-in 0.8s forwards 0.2s;
+    }
+    .splash-tagline {
+      font-size: 14px;
+      color: #64748b;
+      opacity: 0;
+      animation: splash-fade-in 0.8s forwards 0.4s;
+    }
+    .splash-loader {
+      margin-top: 48px;
+      width: 160px;
+      height: 4px;
+      background: #e2e8f0;
+      border-radius: 2px;
+      overflow: hidden;
+      position: relative;
+    }
+    .splash-loader-bar {
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: var(--pg-primary);
+      animation: splash-loading 1.5s infinite ease-in-out;
+    }
+    @keyframes splash-pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.05); opacity: 0.8; }
+    }
+    @keyframes splash-fade-in {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes splash-loading {
+      0% { left: -100%; }
+      50% { left: 0; }
+      100% { left: 100%; }
+    }
+    app-root:not(:empty) + #splash-screen {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+  </style>
 </head>
 <body>
   <app-root></app-root>
+  <div id="splash-screen">
+    <div class="splash-logo">
+      <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="40" height="40" rx="8" fill="#4F46E5"/>
+        <path d="M12 28V12H20C22.2091 12 24 13.7909 24 16C24 18.2091 22.2091 20 20 20H12M20 20L28 28" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="28" cy="12" r="3" fill="#818CF8"/>
+      </svg>
+    </div>
+    <div class="splash-text">PayGlobe</div>
+    <div class="splash-tagline">Global Payroll Intelligence</div>
+    <div class="splash-loader">
+      <div class="splash-loader-bar"></div>
+    </div>
+  </div>
 </body>
 </html>
