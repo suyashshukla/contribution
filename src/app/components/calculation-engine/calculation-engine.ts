@@ -8,7 +8,8 @@ import { Contribution, ContributionType } from '../../models/contribution.model'
 import { GeoGroup } from '../../models/geo-group.model';
 import { GLOBAL_COUNTRIES } from '../../models/countries.data';
 import { NgSelectModule } from '@ng-select/ng-select';
-import { take, combineLatest, map } from 'rxjs';
+import { take, combineLatest, map, of, switchMap } from 'rxjs';
+import { toObservable } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-calculation-engine',
@@ -28,9 +29,17 @@ export class CalculationEngineComponent {
   globalCountries = GLOBAL_COUNTRIES;
   
   selectedCountry = signal<CountryConfig | null>(null);
+  selectedGeoGroupId = signal<string | null>(null);
   results = signal<CalculationResult[]>([]);
   runDate = signal<string>(new Date().toISOString().split('T')[0]);
   dynamicForm: FormGroup = this.formBuilder.group({});
+
+  geoGroups$ = toObservable(this.selectedCountry).pipe(
+    switchMap(country => {
+      if (!country) return of([]);
+      return this.firestore.getCollectionByFilter<GeoGroup>('geoGroups', 'countryCode', country.countryCode);
+    })
+  );
 
   employerTotal = computed(() => 
     this.results().filter(result => result.type === ContributionType.Employer).reduce((accumulator, currentValue) => accumulator + currentValue.amount, 0)
@@ -52,15 +61,21 @@ export class CalculationEngineComponent {
     this.runDate.set(target.value);
   }
 
+  onGeoGroupChange(geoGroup: GeoGroup | null) {
+    this.selectedGeoGroupId.set(geoGroup?.id || null);
+  }
+
   onCountryChange(country: CountryConfig | null) {
     if (!country) {
       this.selectedCountry.set(null);
+      this.selectedGeoGroupId.set(null);
       this.dynamicForm = this.formBuilder.group({});
       this.results.set([]);
       return;
     }
 
     this.selectedCountry.set(country);
+    this.selectedGeoGroupId.set(null);
     this.buildForm(country);
     this.results.set([]);
   }
@@ -91,13 +106,13 @@ export class CalculationEngineComponent {
     const countryCode = this.selectedCountry()!.countryCode;
     const inputs = this.dynamicForm.getRawValue();
     const runDate = this.runDate();
+    const geoGroupId = this.selectedGeoGroupId();
 
-    combineLatest([
-      this.firestore.getCollectionByFilter<Contribution>('contributions', 'countryCode', countryCode),
-      this.firestore.getCollectionByFilter<GeoGroup>('geoGroups', 'countryCode', countryCode)
-    ]).pipe(take(1)).subscribe(([contributions, geoGroups]) => {
-      const calculationResults = this.calculationService.calculate(contributions, inputs, runDate);
-      this.results.set(calculationResults);
-    });
+    this.firestore.getCollectionByFilter<Contribution>('contributions', 'countryCode', countryCode)
+      .pipe(take(1))
+      .subscribe(contributions => {
+        const calculationResults = this.calculationService.calculate(contributions, inputs, runDate, geoGroupId);
+        this.results.set(calculationResults);
+      });
   }
 }

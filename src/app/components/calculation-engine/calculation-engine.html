@@ -42,6 +42,20 @@
         <p class="help-text">Used to identify effective contribution rules.</p>
       </div>
 
+      <div class="form-group">
+        <label for="geoGroupSelect" class="label">Target Geographic Group</label>
+        <ng-select 
+          id="geoGroupSelect"
+          [items]="geoGroups$ | async" 
+          bindLabel="name" 
+          bindValue="id"
+          placeholder="Select geographic group"
+          (change)="onGeoGroupChange($event)"
+          appendTo="body">
+        </ng-select>
+        <p class="help-text">Used to pick the appropriate rule strategy.</p>
+      </div>
+
       @if (selectedCountry()) {
         <form [formGroup]="dynamicForm" (ngSubmit)="calculate()" class="form-layout mt-lg">
           @for (field of selectedCountry()!.fields; track field.id) {

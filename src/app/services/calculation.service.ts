@@ -13,12 +13,12 @@ export interface CalculationResult {
 })
 export class CalculationService {
 
-  calculate(contributions: Contribution[], inputs: Record<string, number>, runDate: string): CalculationResult[] {
+  calculate(contributions: Contribution[], inputs: Record<string, number>, runDate: string, geoGroupId: string | null): CalculationResult[] {
     const results: CalculationResult[] = [];
 
     contributions.forEach(contribution => {
-      // Pick the most recent Employer rule on or before runDate
-      const employerRule = this.getEffectiveRule(contribution.rules, ContributionType.Employer, runDate);
+      // Pick the most recent Employer rule on or before runDate for the selected GeoGroup
+      const employerRule = this.getEffectiveRule(contribution.rules, ContributionType.Employer, runDate, geoGroupId);
       if (employerRule) {
         const amount = this.processRule(employerRule, inputs);
         if (amount !== null) {
@@ -31,8 +31,8 @@ export class CalculationService {
         }
       }
 
-      // Pick the most recent Employee rule on or before runDate
-      const employeeRule = this.getEffectiveRule(contribution.rules, ContributionType.Employee, runDate);
+      // Pick the most recent Employee rule on or before runDate for the selected GeoGroup
+      const employeeRule = this.getEffectiveRule(contribution.rules, ContributionType.Employee, runDate, geoGroupId);
       if (employeeRule) {
         const amount = this.processRule(employeeRule, inputs);
         if (amount !== null) {
@@ -49,9 +49,9 @@ export class CalculationService {
     return results;
   }
 
-  private getEffectiveRule(rules: Rule[], type: ContributionType, runDate: string): Rule | null {
+  private getEffectiveRule(rules: Rule[], type: ContributionType, runDate: string, geoGroupId: string | null): Rule | null {
     const applicableRules = rules
-      .filter(rule => rule.type === type && rule.effectiveFrom <= runDate)
+      .filter(rule => rule.type === type && rule.effectiveFrom <= runDate && (geoGroupId === null || rule.geoGroupId === geoGroupId))
       .sort((ruleA, ruleB) => ruleB.effectiveFrom.localeCompare(ruleA.effectiveFrom));
 
     return applicableRules.length > 0 ? applicableRules[0] : null;
