@@ -1,0 +1,133 @@
+<div class="geo-groups-page">
+  <header class="page-header">
+    <div>
+      <p class="page-kicker">Regional Targeting</p>
+      <h1 class="page-title">Geographic Groups</h1>
+      <p class="page-description">Group cities, states, or jurisdictions into reusable geographic targets for automated payroll rules.</p>
+    </div>
+    <button type="button" class="btn btn-primary" (click)="openAddModal()">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-plus-circle"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+      New Region Group
+    </button>
+  </header>
+
+  <div class="geo-groups-grid">
+    @for (group of geoGroups$ | async; track group.id) {
+      <div class="geo-group-card card">
+        <div class="geo-group-card-header">
+          <div class="geo-group-flag-type">
+            <img [src]="getFlagUrl(countryCode())" class="flag-icon" [alt]="countryName() + ' flag'">
+            <span class="badge badge-primary">{{ group.type }} Group</span>
+          </div>
+          <h2 class="geo-group-name">{{ group.name }}</h2>
+        </div>
+        <div class="geo-group-card-body">
+          <div class="entity-pills">
+            @for (entity of group.entities; track entity) {
+              <span class="pill-sm">{{ entity }}</span>
+            }
+          </div>
+        </div>
+        <div class="geo-group-card-actions">
+          <button type="button" (click)="openEditModal(group)" class="btn btn-secondary btn-sm">Edit</button>
+          <button type="button" (click)="requestDelete(group.id!)" class="btn btn-danger btn-icon-only btn-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-trash-2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+          </button>
+        </div>
+      </div>
+    } @empty {
+      <div class="empty-state">
+        <p class="empty-message">No geographic groups defined</p>
+        <p class="empty-subtext">Define your first region group to start targeting rules.</p>
+        <button type="button" class="btn btn-primary" (click)="openAddModal()">Create Geographic Group</button>
+      </div>
+    }
+  </div>
+
+  <ng-template #formModal>
+    <form [formGroup]="form" (ngSubmit)="save()" class="form-layout modal-form">
+      <div class="form-group">
+        <label for="groupName" class="label">Group Identifier</label>
+        <input id="groupName" formControlName="name" class="input" placeholder="e.g. Northern Emirates, Coastal Regions">
+      </div>
+
+      <div class="form-group">
+        <label class="label">Targeting Level</label>
+        <div class="radio-group">
+          <label class="radio-option">
+            <input type="radio" formControlName="type" value="country">
+            <span>Entire Country</span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" formControlName="type" value="state">
+            <span>States / Provinces</span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" formControlName="type" value="city">
+            <span>Cities / Districts</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="card nested-card">
+        <div class="nested-card-header">
+          <h3 class="nested-card-title">Add Entities</h3>
+          @if (isLoadingLocations()) {
+            <span class="loading-indicator">Syncing locations...</span>
+          }
+        </div>
+
+        <div class="form-grid-col-auto">
+          @if (typeSignal() === 'state' || typeSignal() === 'city') {
+            <div class="form-group flex-grow">
+              <ng-select 
+                formControlName="tempState" 
+                [items]="states()" 
+                placeholder="Select State"
+                appendTo="body">
+              </ng-select>
+            </div>
+          }
+
+          @if (typeSignal() === 'city') {
+            <div class="form-group flex-grow">
+              <ng-select 
+                formControlName="tempCity" 
+                [items]="cities()" 
+                placeholder="Select City"
+                appendTo="body">
+              </ng-select>
+            </div>
+          }
+
+          <button type="button" class="btn btn-secondary btn-sm" (click)="addEntity()" [disabled]="isLoadingLocations()">
+            Add
+          </button>
+        </div>
+
+        @if (selectedEntities().length > 0) {
+          <div class="entity-list-section">
+            <label class="label">Included in this group:</label>
+            <div class="entity-list">
+              @for (entity of selectedEntities(); track entity) {
+                <span class="pill">
+                  {{ entity }}
+                  <button type="button" (click)="removeEntity(entity)" class="pill-remove-btn" aria-label="Remove entity">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-x"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                  </button>
+                </span>
+              }
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary" [disabled]="form.invalid || selectedEntities().length === 0 || isSaving()">
+          {{ isSaving() ? 'Saving...' : (editingGroupId() ? 'Update Group' : 'Create Geographic Group') }}
+        </button>
+      </div>
+    </form>
+  </ng-template>
+</div>

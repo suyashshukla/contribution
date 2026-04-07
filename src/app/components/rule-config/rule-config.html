@@ -1,0 +1,221 @@
+<div class="rules-page">
+  <header class="page-header">
+    <div>
+      <p class="page-kicker">Contribution Architecture</p>
+      <h1 class="page-title">Rule Configuration</h1>
+      <p class="page-description">Design rule sets, effective dates, geo targeting, and slab-based logic in a structured premium editor.</p>
+    </div>
+    <button class="btn btn-primary" (click)="openCreateModal()">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-plus-circle"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+      Add Contribution Set
+    </button>
+  </header>
+
+  <div class="rule-sets-grid">
+    @for (c of contributions$ | async; track c.id) {
+      <div class="rule-set-card card">
+        <div class="rule-set-card-content">
+          <div class="rule-set-info">
+            <div class="rule-set-flag-title">
+              <img [src]="getFlagUrl(countryCode())" class="flag-icon" [alt]="countryCode() + ' flag'">
+              <h2 class="rule-set-name">{{ c.name }}</h2>
+            </div>
+            <div class="rule-set-meta">
+              <span class="badge badge-primary">{{ c.rules.length }} Rule Groups</span>
+              <span class="meta-item">Registry: {{ countryCode() }}</span>
+            </div>
+          </div>
+          <div class="rule-set-actions">
+            <button (click)="openManageRules(c)" class="btn btn-secondary btn-sm">Manage Strategies</button>
+            <button (click)="requestDelete(c.id!)" class="btn btn-danger btn-icon-only btn-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-trash-2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    } @empty {
+      <div class="empty-state">
+        <p class="empty-message">No contribution rules defined</p>
+        <p class="empty-subtext">No contribution rule sets exist for this jurisdiction yet.</p>
+        <button class="btn btn-primary" (click)="openCreateModal()">Define First Rule Set</button>
+      </div>
+    }
+  </div>
+
+  <!-- Modal for Create/Edit Contribution Set -->
+  <ng-template #setModal>
+    <form [formGroup]="setForm" (ngSubmit)="saveSet()" class="form-layout modal-form">
+      <div class="form-group">
+        <label for="setName" class="label">Contribution Set Label</label>
+        <input id="setName" formControlName="name" class="input" placeholder="e.g. Statutory Pension Fund 2026">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="modal.close()">Cancel</button>
+        <button type="submit" [disabled]="setForm.invalid || isSaving()" class="btn btn-primary">
+          {{ isSaving() ? 'Saving...' : 'Create Set' }}
+        </button>
+      </div>
+    </form>
+  </ng-template>
+
+  <!-- Side Modal for Managing Strategies -->
+  <ng-template #manageRulesModal>
+    <div class="manage-strategies-container">
+      <div class="manage-strategies-content">
+        @if (!showStrategyForm()) {
+          <div class="strategy-list-view">
+            <div class="strategy-list-header">
+              <h3 class="list-header-title">Rule Strategies</h3>
+              <button class="btn btn-primary btn-sm" (click)="toggleStrategyForm()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-plus"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                Add New Strategy
+              </button>
+            </div>
+
+            <div class="strategy-items">
+              @for (rule of activeContribution()?.rules; track $index; let ri = $index) {
+                <div class="strategy-item card">
+                  <div class="strategy-item-info">
+                    <h4 class="strategy-item-title">{{ rule.name }}</h4>
+                    <div class="strategy-item-meta">
+                      <span class="badge" [class.badge-employer]="rule.type === 'Employer'" [class.badge-employee]="rule.type === 'Employee'">{{ rule.type }}</span>
+                      <span class="meta-item">Effective: {{ rule.effectiveFrom }}</span>
+                    </div>
+                  </div>
+                  <div class="strategy-item-actions">
+                    <button (click)="toggleStrategyForm(ri)" class="btn btn-secondary btn-sm">Edit</button>
+                    <button (click)="removeStrategy(ri)" class="btn btn-danger btn-sm">Remove</button>
+                  </div>
+                </div>
+              } @empty {
+                <div class="empty-state-small">
+                  <p>No strategies added to this set yet.</p>
+                </div>
+              }
+            </div>
+          </div>
+        } @else {
+          <form [formGroup]="strategyForm" (ngSubmit)="saveStrategy()" class="form-layout strategy-form">
+            <div class="strategy-form-header">
+              <h3 class="form-header-title">{{ editingStrategyIndex() !== null ? 'Edit Strategy' : 'New Rule Strategy' }}</h3>
+              <button type="button" (click)="showStrategyForm.set(false)" class="btn btn-secondary btn-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-left"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                Back to List
+              </button>
+            </div>
+
+            <div class="form-grid-2col">
+              <div class="form-group">
+                <label for="strategyName" class="label">Strategy Name</label>
+                <input id="strategyName" formControlName="name" class="input" placeholder="e.g. Employer contribution">
+              </div>
+              <div class="form-group">
+                <label for="contributionType" class="label">Contribution Type</label>
+                <ng-select id="contributionType" formControlName="type" [clearable]="false" appendTo="body">
+                  <ng-option value="Employer">Employer contribution</ng-option>
+                  <ng-option value="Employee">Employee deduction</ng-option>
+                </ng-select>
+              </div>
+              <div class="form-group">
+                <label for="effectiveFrom" class="label">Effective From</label>
+                <input id="effectiveFrom" type="date" formControlName="effectiveFrom" class="input">
+              </div>
+              <div class="form-group">
+                <label for="geographicTarget" class="label">Geographic Target</label>
+                <ng-select 
+                  id="geographicTarget"
+                  formControlName="geoGroupId" 
+                  [items]="geoGroups$ | async" 
+                  bindLabel="name" 
+                  bindValue="id"
+                  placeholder="All regions"
+                  appendTo="body">
+                </ng-select>
+              </div>
+            </div>
+
+            <div class="slabs-section card nested-card">
+              <div class="slabs-section-header">
+                <h4 class="slabs-title">Calculation Tiers</h4>
+                <button type="button" (click)="addSlab()" class="btn btn-secondary btn-sm">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-plus"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                  Add Tier
+                </button>
+              </div>
+
+              <div formArrayName="slabs" class="slabs-list">
+                @for (slab of slabs.controls; track $index; let si = $index) {
+                  <div [formGroupName]="si" class="slab-item">
+                    <div class="slab-item-header">
+                      <span class="badge badge-secondary">Tier {{ si + 1 }}</span>
+                      <button type="button" (click)="slabs.removeAt(si)" class="btn btn-danger btn-sm">Remove</button>
+                    </div>
+
+                    <div class="slab-item-grid">
+                      <div class="form-group">
+                        <label class="label">Min Threshold</label>
+                        <input type="number" formControlName="min" class="input">
+                      </div>
+                      <div class="form-group">
+                        <label class="label">Max Threshold</label>
+                        <input type="number" formControlName="max" class="input">
+                      </div>
+                      <div class="form-group">
+                        <label class="label">Value Source</label>
+                        <ng-select 
+                          formControlName="valueSourceFieldId" 
+                          [items]="selectedCountry()?.fields || []" 
+                          bindLabel="name" 
+                          bindValue="id"
+                          placeholder="Select source"
+                          appendTo="body">
+                        </ng-select>
+                      </div>
+                      <div class="form-group">
+                        <label class="label">Calculation</label>
+                        <div class="input-group">
+                          <ng-select formControlName="calcType" [clearable]="false" appendTo="body" class="calc-type-select">
+                            <ng-option value="Percentage">% Rate</ng-option>
+                            <ng-option value="Fixed">$ Fixed</ng-option>
+                          </ng-select>
+                          <input type="number" formControlName="val" class="input">
+                        </div>
+                      </div>
+                      <div class="form-group">
+                        <label class="label">Wage Basis</label>
+                        <ng-select 
+                          formControlName="wageTypeFieldId" 
+                          [items]="selectedCountry()?.fields || []" 
+                          bindLabel="name" 
+                          bindValue="id"
+                          placeholder="Select basis"
+                          appendTo="body">
+                        </ng-select>
+                      </div>
+                      <div class="form-group">
+                        <label class="label">Cap / Ceiling</label>
+                        <input type="number" formControlName="ceiling" class="input">
+                      </div>
+                    </div>
+                  </div>
+                } @empty {
+                  <div class="empty-state-small">
+                    <p>No calculation tiers defined for this strategy.</p>
+                    <button type="button" (click)="addSlab()" class="btn btn-secondary btn-sm mt-md">Add First Tier</button>
+                  </div>
+                }
+              </div>
+            </div>
+
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" (click)="showStrategyForm.set(false)">Cancel</button>
+              <button type="submit" [disabled]="strategyForm.invalid || isSaving()" class="btn btn-primary">
+                {{ isSaving() ? 'Saving...' : (editingStrategyIndex() !== null ? 'Update Strategy' : 'Add Strategy to Set') }}
+              </button>
+            </div>
+          </form>
+        }
+      </div>
+    </div>
+  </ng-template>
+</div>

@@ -1,0 +1,102 @@
+<div class="calculation-page">
+  <header class="page-header">
+    <div>
+      <p class="page-kicker">Simulation Center</p>
+      <h1 class="page-title">Calculation Engine</h1>
+      <p class="page-description">Execute payroll contribution simulations based on finalized regional schemas and rule strategies.</p>
+    </div>
+  </header>
+
+  <div class="calculation-layout">
+    <aside class="calculation-controls card">
+      <h2 class="card-title">Simulation Inputs</h2>
+      
+      <div class="form-group">
+        <label for="countrySelect" class="label">Target Jurisdiction</label>
+        <ng-select 
+          id="countrySelect"
+          [items]="countries$ | async" 
+          bindLabel="countryName" 
+          bindValue="id"
+          placeholder="Search country schema"
+          (change)="onCountryChange($event)"
+          appendTo="body">
+          <ng-template ng-option-tmp let-item="item">
+            <div class="country-select-option">
+              <img [src]="getFlagUrl(item.countryCode)" class="flag-icon" alt="{{ item.countryName }} flag">
+              <span>{{ item.countryName }}</span>
+            </div>
+          </ng-template>
+          <ng-template ng-label-tmp let-item="item">
+            <div class="country-select-option">
+              <img [src]="getFlagUrl(item.countryCode)" class="flag-icon" alt="{{ item.countryName }} flag">
+              <span>{{ item.countryName }}</span>
+            </div>
+          </ng-template>
+        </ng-select>
+      </div>
+
+      @if (selectedCountry()) {
+        <form [formGroup]="dynamicForm" (ngSubmit)="calculate()" class="form-layout mt-lg">
+          @for (field of selectedCountry()!.fields; track field.id) {
+            <div class="form-group">
+              <label [for]="field.id" class="label">{{ field.name }}</label>
+              <input [id]="field.id" type="number" [formControlName]="field.id" class="input" placeholder="0.00">
+            </div>
+          }
+          <button type="submit" class="btn btn-primary btn-full" [disabled]="dynamicForm.invalid">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-play-circle"><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon></svg>
+            Run Simulation
+          </button>
+        </form>
+      } @else {
+        <div class="empty-state-small mt-xl">
+          <p>Select a jurisdiction to load available salary fields.</p>
+        </div>
+      }
+    </aside>
+
+    <main class="calculation-results">
+      <div class="results-summary">
+        <div class="summary-card">
+          <p class="summary-label">Employer Total</p>
+          <strong class="summary-value">{{ employerTotal() | currency }}</strong>
+        </div>
+        <div class="summary-card">
+          <p class="summary-label">Employee Total</p>
+          <strong class="summary-value">{{ employeeTotal() | currency }}</strong>
+        </div>
+      </div>
+
+      <div class="results-breakdown card">
+        <h2 class="card-title">Breakdown Analysis</h2>
+        
+        <div class="results-table">
+          <div class="table-header">
+            <div class="table-col">Rule Name</div>
+            <div class="table-col">Type</div>
+            <div class="table-col text-align-right">Calculated Amount</div>
+          </div>
+          
+          <div class="table-body">
+            @for (res of results(); track res.ruleName) {
+              <div class="table-row">
+                <div class="table-col font-weight-semibold">{{ res.ruleName }}</div>
+                <div class="table-col">
+                  <span class="badge" [class.badge-employer]="res.type === 'Employer'" [class.badge-employee]="res.type === 'Employee'">
+                    {{ res.type }}
+                  </span>
+                </div>
+                <div class="table-col text-align-right font-mono font-weight-semibold">{{ res.amount | currency }}</div>
+              </div>
+            } @empty {
+              <div class="empty-results">
+                <p>Run a simulation to see the rule breakdown.</p>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>

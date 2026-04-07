@@ -1,0 +1,170 @@
+<div class="wizard-page">
+  <header class="wizard-header">
+    <div class="wizard-header-content">
+      <button class="btn btn-icon-only btn-secondary" (click)="closeWizard()" aria-label="Close Wizard">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-arrow-left"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+      </button>
+      <div class="wizard-title-group">
+        <p class="wizard-kicker">Country Studio</p>
+        <h1 class="wizard-title">{{ selectedCountry() ? 'Managing ' + selectedCountry()!.countryName : 'New Country Setup' }}</h1>
+        <p class="wizard-description">Move through schema, geographic targeting, and contribution policy design in one guided workflow.</p>
+      </div>
+    </div>
+    <div class="wizard-header-actions">
+      <div class="wizard-status">
+        <p class="wizard-kicker">Current Step</p>
+        <strong class="wizard-current-step">0{{ currentStep() }} / 03</strong>
+      </div>
+      <button class="btn btn-primary" (click)="closeWizard()">Finish Workflow</button>
+    </div>
+  </header>
+
+  <div class="wizard-body">
+    <aside class="wizard-stepper">
+      <p class="stepper-kicker">Workflow Map</p>
+      <p class="stepper-description">Each stage is structured as a focused studio so policy teams can configure with less ambiguity.</p>
+      <ul class="stepper-list">
+        <li class="stepper-item" [class.is-active]="currentStep() === 1" [class.is-completed]="currentStep() > 1" (click)="setStep(1)">
+          <span class="stepper-circle">1</span>
+          <span class="stepper-label">Country Details & Fields</span>
+        </li>
+        <li class="stepper-item" [class.is-active]="currentStep() === 2" [class.is-completed]="currentStep() > 2" (click)="setStep(2)">
+          <span class="stepper-circle">2</span>
+          <span class="stepper-label">Geographic Groups</span>
+        </li>
+        <li class="stepper-item" [class.is-active]="currentStep() === 3" [class.is-completed]="currentStep() > 3" (click)="setStep(3)">
+          <span class="stepper-circle">3</span>
+          <span class="stepper-label">Contribution Rules</span>
+        </li>
+      </ul>
+    </aside>
+
+    <div class="wizard-content-area card">
+      @if (currentStep() === 1) {
+        <div class="wizard-step-panel">
+          <h2 class="step-panel-title">Define Country Details & Salary Fields</h2>
+          <p class="step-panel-description">Set up basic country information and define the input fields required for contribution calculations.</p>
+
+          <form [formGroup]="countryForm" class="form-layout">
+            <div class="form-grid-2col">
+              <div class="form-group">
+                <label for="countryCode" class="label">Registry Region</label>
+                <ng-select 
+                  id="countryCode"
+                  [items]="globalCountries" 
+                  bindLabel="name" 
+                  bindValue="code"
+                  placeholder="Search and select country"
+                  (change)="onCountrySelect($event)"
+                  formControlName="countryCode"
+                  [clearable]="false"
+                  appendTo="body">
+                  <ng-template ng-option-tmp let-item="item">
+                    <div class="country-select-option">
+                      <img [src]="getFlagUrl(item.code)" class="flag-icon" alt="{{ item.name }} flag">
+                      <span>{{ item.name }}</span>
+                    </div>
+                  </ng-template>
+                  <ng-template ng-label-tmp>
+                    @let country = getCountryByCode(countryForm.get('countryCode')?.value);
+                    <div class="country-select-option">
+                      <img [src]="getFlagUrl(country?.code)" class="flag-icon" alt="{{ country?.name }} flag">
+                      <span>{{ country?.name }}</span>
+                    </div>
+                  </ng-template>
+                </ng-select>
+              </div>
+              <div class="form-group">
+                <label for="countryName" class="label">System Label</label>
+                <input id="countryName" type="text" class="input" formControlName="countryName" readonly>
+              </div>
+            </div>
+
+            <div class="salary-fields-manager">
+              <div class="manager-header">
+                <div>
+                  <h3 class="manager-title">Salary Data Schema</h3>
+                  <p class="manager-description">Define the input fields required for contribution calculations.</p>
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" (click)="openFieldModal()">Add Field Definition</button>
+              </div>
+
+              <div class="field-list">
+                @for (field of fields.controls; track $index; let i = $index) {
+                  <div class="field-item">
+                    <div class="field-type-badge">
+                      <span class="badge badge-primary">{{ field.get('type')?.value }}</span>
+                    </div>
+                    <div class="field-details">
+                      <span class="field-name">{{ field.get('name')?.value }}</span>
+                      <span class="field-id">{{ field.get('id')?.value }}</span>
+                    </div>
+                    <div class="field-actions">
+                      <button type="button" class="btn btn-secondary btn-sm" (click)="openFieldModal(i)">Edit</button>
+                      <button type="button" class="btn btn-danger btn-sm" (click)="removeField(i)">Delete</button>
+                    </div>
+                  </div>
+                } @empty {
+                  <div class="empty-state-small">
+                    <p>No schema fields defined yet.</p>
+                  </div>
+                }
+              </div>
+            </div>
+          </form>
+        </div>
+      }
+      @if (currentStep() === 2 && selectedCountry()) {
+        <div class="wizard-step-panel">
+          <app-geo-groups [countryCode]="selectedCountry()!.countryCode"></app-geo-groups>
+        </div>
+      }
+      @if (currentStep() === 3 && selectedCountry()) {
+        <div class="wizard-step-panel">
+          <app-rule-config [countryCode]="selectedCountry()!.countryCode"></app-rule-config>
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="wizard-footer">
+    <button type="button" class="btn btn-secondary" [disabled]="currentStep() === 1 || isSaving()" (click)="back()">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-chevron-left"><polyline points="15 18 9 12 15 6"></polyline></svg>
+      Previous Step
+    </button>
+    <button type="button" class="btn btn-primary" [disabled]="currentStep() === 3 || isSaving()" (click)="next()">
+      {{ isSaving() ? 'Saving...' : 'Next Step' }}
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-chevron-right"><polyline points="9 18 15 12 9 6"></polyline></svg>
+    </button>
+  </div>
+</div>
+
+<ng-template #fieldModal>
+  <form [formGroup]="fieldEditForm" (ngSubmit)="saveField()" class="form-layout">
+    <div class="form-grid-2col">
+      <div class="form-group">
+        <label for="fieldId" class="label">Field Key (ID)</label>
+        <input id="fieldId" type="text" class="input" formControlName="id" placeholder="e.g. basic_salary">
+      </div>
+      <div class="form-group">
+        <label for="fieldName" class="label">Display Name</label>
+        <input id="fieldName" type="text" class="input" formControlName="name" placeholder="e.g. Basic Salary">
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="fieldType" class="label">Value Type</label>
+      <ng-select id="fieldType" formControlName="type" [clearable]="false" appendTo="body">
+        <ng-option value="numeric">Numeric (Amount)</ng-option>
+        <ng-option value="percentage">Percentage (Rate)</ng-option>
+        <ng-option value="boolean">Boolean (Toggle)</ng-option>
+      </ng-select>
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" (click)="modal.close()">Cancel</button>
+      <button type="submit" class="btn btn-primary" [disabled]="fieldEditForm.invalid">
+        Save Field
+      </button>
+    </div>
+  </form>
+</ng-template>

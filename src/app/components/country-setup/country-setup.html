@@ -1,0 +1,60 @@
+<div class="country-list-page">
+  <header class="page-header">
+    <div>
+      <p class="page-kicker">Regional Studio</p>
+      <h1 class="page-title">Country Studio</h1>
+      <p class="page-description">Configure regional payroll schemas, core contribution fields, and registry settings for new jurisdictions.</p>
+    </div>
+    <div class="page-stats">
+      <span class="stat-label">Active Schemas</span>
+      <strong class="stat-value">{{ (countries$ | async)?.length || 0 }}</strong>
+    </div>
+  </header>
+
+  <section class="country-management-section">
+    <div class="section-header">
+      <div>
+        <h2 class="section-title">Jurisdiction Registry</h2>
+        <p class="section-description">Manage existing country configurations or initialize a new registry.</p>
+      </div>
+      <a routerLink="/manage-country/new" class="btn btn-primary">Initialize New Country</a>
+    </div>
+
+    <div class="country-grid">
+      @for (country of countries$ | async; track country.id) {
+        <div class="country-card">
+          <div class="country-card-header">
+            <div class="country-flag">
+              <img [src]="getFlagUrl(country.countryCode)" alt="Flag of {{ country.countryName }}">
+            </div>
+            <div class="country-info">
+              <span class="country-name">{{ country.countryName }}</span>
+              <span class="country-code">{{ country.countryCode }} Registry</span>
+            </div>
+          </div>
+          
+          <div class="country-stats">
+            <div class="country-stat-item">
+              <span class="stat-label">Schema Fields</span>
+              <span class="stat-value">{{ country.fields.length }}</span>
+            </div>
+            <div class="country-stat-item">
+              <span class="stat-label">Status</span>
+              <span class="stat-value status-active">Active</span>
+            </div>
+          </div>
+
+          <div class="country-card-actions">
+            <a [routerLink]="['/manage-country', country.id]" class="btn btn-secondary btn-full">Manage Workspace</a>
+          </div>
+        </div>
+      } @empty {
+        <div class="empty-state">
+          <p class="empty-message">No registries found</p>
+          <p class="empty-subtext">You haven't configured any country schemas yet.</p>
+          <a routerLink="/manage-country/new" class="btn btn-primary">Create your first schema</a>
+        </div>
+      }
+    </div>
+  </section>
+</div>
