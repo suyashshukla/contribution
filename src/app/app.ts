@@ -6,9 +6,7 @@ import { UiConfirmModalComponent } from './components/shared/ui-confirm-modal';
 import { ToastContainerComponent } from './components/shared/toast-container.component';
 import { 
   IconChartComponent, 
-  IconGlobeComponent, 
-  IconSettingsComponent, 
-  IconMapPinComponent 
+  IconGlobeComponent
 } from './components/shared/icons';
 import { ModalService } from './services/modal.service';
 import { CommonModule } from '@angular/common';
@@ -26,9 +24,7 @@ import { CommonModule } from '@angular/common';
     UiConfirmModalComponent,
     ToastContainerComponent,
     IconChartComponent,
-    IconGlobeComponent,
-    IconSettingsComponent,
-    IconMapPinComponent
+    IconGlobeComponent
   ],
   templateUrl: './app.html',
   styleUrl: './app.css'
