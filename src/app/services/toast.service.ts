@@ -68,7 +68,7 @@ export class ToastService {
    * @param id - Toast id to remove
    */
   remove(id: string) {
-    this.toasts.update(toasts => toasts.filter(t => t.id !== id));
+    this.toasts.update(toasts => toasts.filter(toastItem => toastItem.id !== id));
   }
 
   /**

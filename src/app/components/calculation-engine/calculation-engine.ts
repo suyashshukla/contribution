@@ -35,9 +35,9 @@ export class CalculationEngineComponent {
   dynamicForm: FormGroup = this.formBuilder.group({});
 
   geoGroups$ = toObservable(this.selectedCountry).pipe(
-    switchMap(country => {
-      if (!country) return of([]);
-      return this.firestore.getCollectionByFilter<GeoGroup>('geoGroups', 'countryCode', country.countryCode);
+    switchMap(countryConfig => {
+      if (!countryConfig) return of([]);
+      return this.firestore.getCollectionByFilter<GeoGroup>('geoGroups', 'countryCode', countryConfig.countryCode);
     })
   );
 
@@ -65,8 +65,8 @@ export class CalculationEngineComponent {
     this.selectedGeoGroupId.set(geoGroup?.id || null);
   }
 
-  onCountryChange(country: CountryConfig | null) {
-    if (!country) {
+  onCountryChange(countryConfig: CountryConfig | null) {
+    if (!countryConfig) {
       this.selectedCountry.set(null);
       this.selectedGeoGroupId.set(null);
       this.dynamicForm = this.formBuilder.group({});
@@ -74,9 +74,9 @@ export class CalculationEngineComponent {
       return;
     }
 
-    this.selectedCountry.set(country);
+    this.selectedCountry.set(countryConfig);
     this.selectedGeoGroupId.set(null);
-    this.buildForm(country);
+    this.buildForm(countryConfig);
     this.results.set([]);
   }
 
@@ -106,13 +106,20 @@ export class CalculationEngineComponent {
     const countryCode = this.selectedCountry()!.countryCode;
     const inputs = this.dynamicForm.getRawValue();
     const runDate = this.runDate();
-    const geoGroupId = this.selectedGeoGroupId();
+    const selectedGeoGroupId = this.selectedGeoGroupId();
 
-    this.firestore.getCollectionByFilter<Contribution>('contributions', 'countryCode', countryCode)
-      .pipe(take(1))
-      .subscribe(contributions => {
-        const calculationResults = this.calculationService.calculate(contributions, inputs, runDate, geoGroupId);
-        this.results.set(calculationResults);
-      });
+    combineLatest([
+      this.firestore.getCollectionByFilter<Contribution>('contributions', 'countryCode', countryCode),
+      this.firestore.getCollectionByFilter<GeoGroup>('geoGroups', 'countryCode', countryCode)
+    ]).pipe(take(1)).subscribe(([contributions, geoGroups]) => {
+      const calculationResults = this.calculationService.calculate(
+        contributions, 
+        inputs, 
+        runDate, 
+        selectedGeoGroupId,
+        geoGroups
+      );
+      this.results.set(calculationResults);
+    });
   }
 }

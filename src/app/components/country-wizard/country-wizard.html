@@ -90,7 +90,7 @@
               </div>
 
               <div class="field-list">
-                @for (field of fields.controls; track $index; let i = $index) {
+                @for (field of fieldsSignal(); track $index; let i = $index) {
                   <div class="field-item">
                     <div class="field-type-badge">
                       <span class="badge badge-primary">{{ field.get('type')?.value }}</span>

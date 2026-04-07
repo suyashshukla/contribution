@@ -5,10 +5,21 @@
       <h1 class="page-title">Rule Configuration</h1>
       <p class="page-description">Design rule sets, effective dates, geo targeting, and slab-based logic in a structured premium editor.</p>
     </div>
-    <button class="btn btn-primary" (click)="openCreateModal()">
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-plus-circle"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
-      Add Contribution Set
-    </button>
+    <div class="header-actions">
+      <input type="file" #fileInput (change)="onFileSelected($event)" accept=".xlsx, .xls" style="display: none;">
+      <button class="btn btn-secondary" (click)="downloadTemplate()">
+        <app-icon-download [size]="18" class="mr-xs"></app-icon-download>
+        Download Pre-filled Template
+      </button>
+      <button class="btn btn-secondary" (click)="fileInput.click()" [disabled]="isImporting()">
+        <app-icon-upload [size]="18" class="mr-xs"></app-icon-upload>
+        {{ isImporting() ? 'Importing...' : 'Bulk Import via Excel' }}
+      </button>
+      <button class="btn btn-primary" (click)="openCreateModal()">
+        <app-icon-plus [size]="18" class="mr-xs"></app-icon-plus>
+        Add Contribution Set
+      </button>
+    </div>
   </header>
 
   <div class="rule-sets-grid">
@@ -67,7 +78,7 @@
             <div class="strategy-list-header">
               <h3 class="list-header-title">Rule Strategies</h3>
               <button class="btn btn-primary btn-sm" (click)="toggleStrategyForm()">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-plus"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                <app-icon-plus [size]="16" class="mr-xs"></app-icon-plus>
                 Add New Strategy
               </button>
             </div>
@@ -138,7 +149,7 @@
               <div class="slabs-section-header">
                 <h4 class="slabs-title">Calculation Tiers</h4>
                 <button type="button" (click)="addSlab()" class="btn btn-secondary btn-sm">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-plus"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                  <app-icon-plus [size]="16" class="mr-xs"></app-icon-plus>
                   Add Tier
                 </button>
               </div>
@@ -151,40 +162,27 @@
                       <button type="button" (click)="slabs.removeAt(slabIndex)" class="btn btn-danger btn-sm">Remove</button>
                     </div>
 
-                    <div class="slab-item-grid">
-                      <div class="form-group">
-                        <label class="label">Minimum Threshold</label>
-                        <input type="number" formControlName="minimum" class="input">
+                    <div class="sentence-container">
+                      <span class="sentence-text">
+                        {{ strategyForm.get('type')?.value === ContributionType.Employee ? 'Deduct' : 'Contribute' }}
+                      </span>
+                      
+                      <div class="sentence-input sentence-input-sm">
+                        <input type="number" formControlName="rateOrAmount" class="input" placeholder="0">
                       </div>
-                      <div class="form-group">
-                        <label class="label">Maximum Threshold</label>
-                        <input type="number" formControlName="maximum" class="input">
-                      </div>
-                      <div class="form-group">
-                        <label class="label">Value Source</label>
-                        <ng-select 
-                          formControlName="valueSourceFieldId" 
-                          [items]="selectedCountry()?.fields || []" 
-                          bindLabel="name" 
-                          bindValue="id"
-                          placeholder="Select source"
-                          appendTo="body">
+
+                      <div class="sentence-input sentence-input-md">
+                        <ng-select formControlName="calculationType" [clearable]="false" appendTo="body">
+                          <ng-option [value]="CalculationType.Percentage">Percentage</ng-option>
+                          <ng-option [value]="CalculationType.Fixed">Fixed Value</ng-option>
                         </ng-select>
                       </div>
-                      <div class="form-group">
-                        <label class="label">Calculation</label>
-                        <div class="input-group">
-                          <ng-select formControlName="calculationType" [clearable]="false" appendTo="body" class="calc-type-select">
-                            <ng-option value="Percentage">% Rate</ng-option>
-                            <ng-option value="Fixed">$ Fixed</ng-option>
-                          </ng-select>
-                          <input type="number" formControlName="value" class="input">
-                        </div>
-                      </div>
-                      <div class="form-group">
-                        <label class="label">Wage Basis</label>
+
+                      <span class="sentence-text">of</span>
+
+                      <div class="sentence-input sentence-input-lg">
                         <ng-select 
-                          formControlName="wageTypeFieldId" 
+                          formControlName="calculationBasisFieldId" 
                           [items]="selectedCountry()?.fields || []" 
                           bindLabel="name" 
                           bindValue="id"
@@ -192,9 +190,36 @@
                           appendTo="body">
                         </ng-select>
                       </div>
-                      <div class="form-group">
-                        <label class="label">Cap / Ceiling</label>
-                        <input type="number" formControlName="ceiling" class="input">
+
+                      <span class="sentence-text">if</span>
+
+                      <div class="sentence-input sentence-input-lg">
+                        <ng-select 
+                          formControlName="tierDeterminationFieldId" 
+                          [items]="selectedCountry()?.fields || []" 
+                          bindLabel="name" 
+                          bindValue="id"
+                          placeholder="Select field"
+                          appendTo="body">
+                        </ng-select>
+                      </div>
+
+                      <span class="sentence-text">falls between</span>
+
+                      <div class="sentence-input sentence-input-md">
+                        <input type="number" formControlName="tierLowerLimit" class="input" placeholder="Min">
+                      </div>
+
+                      <span class="sentence-text">to</span>
+
+                      <div class="sentence-input sentence-input-md">
+                        <input type="number" formControlName="tierUpperLimit" class="input" placeholder="Max">
+                      </div>
+
+                      <span class="sentence-text">and the contribution cap cannot go beyond</span>
+
+                      <div class="sentence-input sentence-input-md">
+                        <input type="number" formControlName="contributionCap" class="input" placeholder="0">
                       </div>
                     </div>
                   </div>

@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
-import { Contribution, Rule, Slab, ContributionType } from '../models/contribution.model';
+import { Contribution, Rule, Slab, ContributionType, CalculationType } from '../models/contribution.model';
+import { GeoGroup } from '../models/geo-group.model';
 
 export interface CalculationResult {
   contributionName: string;
@@ -13,12 +14,18 @@ export interface CalculationResult {
 })
 export class CalculationService {
 
-  calculate(contributions: Contribution[], inputs: Record<string, number>, runDate: string, geoGroupId: string | null): CalculationResult[] {
+  calculate(
+    contributions: Contribution[], 
+    inputs: Record<string, any>, 
+    runDate: string, 
+    selectedGeoGroupId: string | null,
+    geoGroups: GeoGroup[]
+  ): CalculationResult[] {
     const results: CalculationResult[] = [];
 
     contributions.forEach(contribution => {
-      // Pick the most recent Employer rule on or before runDate for the selected GeoGroup
-      const employerRule = this.getEffectiveRule(contribution.rules, ContributionType.Employer, runDate, geoGroupId);
+      // Filter rules by runDate and geographic applicability
+      const employerRule = this.getEffectiveRule(contribution.rules, ContributionType.Employer, runDate, selectedGeoGroupId, geoGroups, inputs);
       if (employerRule) {
         const amount = this.processRule(employerRule, inputs);
         if (amount !== null) {
@@ -31,8 +38,7 @@ export class CalculationService {
         }
       }
 
-      // Pick the most recent Employee rule on or before runDate for the selected GeoGroup
-      const employeeRule = this.getEffectiveRule(contribution.rules, ContributionType.Employee, runDate, geoGroupId);
+      const employeeRule = this.getEffectiveRule(contribution.rules, ContributionType.Employee, runDate, selectedGeoGroupId, geoGroups, inputs);
       if (employeeRule) {
         const amount = this.processRule(employeeRule, inputs);
         if (amount !== null) {
@@ -49,33 +55,72 @@ export class CalculationService {
     return results;
   }
 
-  private getEffectiveRule(rules: Rule[], type: ContributionType, runDate: string, geoGroupId: string | null): Rule | null {
+  private getEffectiveRule(
+    rules: Rule[], 
+    type: ContributionType, 
+    runDate: string, 
+    selectedGeoGroupId: string | null,
+    geoGroups: GeoGroup[],
+    inputs: Record<string, any>
+  ): Rule | null {
     const applicableRules = rules
-      .filter(rule => rule.type === type && rule.effectiveFrom <= runDate && (geoGroupId === null || rule.geoGroupId === geoGroupId))
+      .filter(rule => {
+        // 1. Basic Type and Date filter
+        if (rule.type !== type || rule.effectiveFrom > runDate) return false;
+
+        // 2. Explicit selection filter (if user picked a group in simulation dropdown)
+        if (selectedGeoGroupId && rule.geoGroupId !== selectedGeoGroupId) return false;
+
+        // 3. Dynamic input matching (if no group selected, or to verify selected group matches inputs)
+        const geoGroup = geoGroups.find(groupItem => groupItem.id === rule.geoGroupId);
+        if (geoGroup && !this.isLocationMatching(geoGroup, inputs)) return false;
+
+        return true;
+      })
       .sort((ruleA, ruleB) => ruleB.effectiveFrom.localeCompare(ruleA.effectiveFrom));
 
     return applicableRules.length > 0 ? applicableRules[0] : null;
   }
 
+  private isLocationMatching(group: GeoGroup, inputs: Record<string, any>): boolean {
+    let inputLocationValue = '';
+    
+    // Attempt to find relevant input based on group type
+    // We assume field IDs might contain keywords like 'country', 'state', 'city'
+    if (group.type === 'country') {
+      const countryKey = Object.keys(inputs).find(key => key.toLowerCase().includes('country'));
+      inputLocationValue = countryKey ? inputs[countryKey] : '';
+    } else if (group.type === 'state') {
+      const stateKey = Object.keys(inputs).find(key => key.toLowerCase().includes('state') || key.toLowerCase().includes('province'));
+      inputLocationValue = stateKey ? inputs[stateKey] : '';
+    } else if (group.type === 'city') {
+      const cityKey = Object.keys(inputs).find(key => key.toLowerCase().includes('city') || key.toLowerCase().includes('district'));
+      inputLocationValue = cityKey ? inputs[cityKey] : '';
+    }
+
+    if (!inputLocationValue) return true; // If no specific input found, assume match to avoid over-filtering
+
+    const isIncluded = group.entities.includes(inputLocationValue);
+    
+    return group.selectionMode === 'include' ? isIncluded : !isIncluded;
+  }
+
   private processRule(rule: Rule, inputs: Record<string, number>): number | null {
-    // 1. Find the applicable slab based on Value Source Input
     for (const slab of rule.slabs) {
-      const valueSourceValue = inputs[slab.valueSourceFieldId] || 0;
+      const determinationValue = inputs[slab.tierDeterminationFieldId] || 0;
       
-      if (valueSourceValue >= slab.minimum && valueSourceValue <= slab.maximum) {
-        // Slab matched
-        const wageTypeValue = inputs[slab.wageTypeFieldId] || 0;
+      if (determinationValue >= slab.tierLowerLimit && determinationValue <= slab.tierUpperLimit) {
+        const calculationBasisValue = inputs[slab.calculationBasisFieldId] || 0;
         let amount = 0;
 
-        if (slab.calculationType === 'Percentage') {
-          amount = (wageTypeValue * slab.value) / 100;
+        if (slab.calculationType === CalculationType.Percentage) {
+          amount = (calculationBasisValue * slab.rateOrAmount) / 100;
         } else {
-          amount = slab.value;
+          amount = slab.rateOrAmount;
         }
 
-        // Apply Ceiling
-        if (slab.ceiling > 0 && amount > slab.ceiling) {
-          amount = slab.ceiling;
+        if (slab.contributionCap > 0 && amount > slab.contributionCap) {
+          amount = slab.contributionCap;
         }
 
         return amount;

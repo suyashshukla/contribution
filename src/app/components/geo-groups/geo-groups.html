@@ -51,33 +51,70 @@
         <input id="groupName" formControlName="name" class="input" placeholder="e.g. Northern Emirates, Coastal Regions">
       </div>
 
-      <div class="form-group">
-        <label class="label">Targeting Level</label>
-        <div class="radio-group">
-          <label class="radio-option">
-            <input type="radio" formControlName="type" value="country">
-            <span>Entire Country</span>
-          </label>
-          <label class="radio-option">
-            <input type="radio" formControlName="type" value="state">
-            <span>States / Provinces</span>
-          </label>
-          <label class="radio-option">
-            <input type="radio" formControlName="type" value="city">
-            <span>Cities / Districts</span>
-          </label>
+      <div class="form-row">
+        <div class="form-group flex-1">
+          <label class="label">Targeting Level</label>
+          <div class="radio-group">
+            <label class="radio-option">
+              <input type="radio" formControlName="type" value="country">
+              <span>Country</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" formControlName="type" value="state">
+              <span>States</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" formControlName="type" value="city">
+              <span>Cities</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group flex-1">
+          <label class="label">Selection Mode</label>
+          <div class="radio-group">
+            <label class="radio-option">
+              <input type="radio" formControlName="selectionMode" value="include">
+              <span>Include</span>
+            </label>
+            <label class="radio-option">
+              <input type="radio" formControlName="selectionMode" value="exclude">
+              <span>Exclude</span>
+            </label>
+          </div>
         </div>
       </div>
 
       <div class="card nested-card">
         <div class="nested-card-header">
-          <h3 class="nested-card-title">Add Entities</h3>
+          <h3 class="nested-card-title">
+            {{ selectionModeSignal() === 'exclude' ? 'Add to Exclusion List' : 'Add Entities' }}
+          </h3>
           @if (isLoadingLocations()) {
             <span class="loading-indicator">Syncing locations...</span>
           }
         </div>
 
         <div class="form-grid-col-auto">
+          @if (typeSignal() === 'country') {
+            <div class="form-group flex-grow">
+              <ng-select 
+                formControlName="tempCountry" 
+                [items]="globalCountries" 
+                bindLabel="name"
+                bindValue="name"
+                placeholder="Select Country"
+                appendTo="body">
+                <ng-template ng-option-tmp let-item="item">
+                  <div class="country-select-option">
+                    <span>{{ item.flag }}</span>
+                    <span>{{ item.name }}</span>
+                  </div>
+                </ng-template>
+              </ng-select>
+            </div>
+          }
+
           @if (typeSignal() === 'state' || typeSignal() === 'city') {
             <div class="form-group flex-grow">
               <ng-select 
@@ -107,24 +144,29 @@
 
         @if (selectedEntities().length > 0) {
           <div class="entity-list-section">
-            <label class="label">Included in this group:</label>
+            <label class="label">
+              {{ selectionModeSignal() === 'exclude' ? 'Entities to be EXCLUDED:' : 'Selected for inclusion:' }}
+            </label>
             <div class="entity-list">
               @for (entity of selectedEntities(); track entity) {
-                <span class="pill">
+                <span class="pill" [class.pill-danger]="selectionModeSignal() === 'exclude'">
                   {{ entity }}
                   <button type="button" (click)="removeEntity(entity)" class="pill-remove-btn" aria-label="Remove entity">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-x"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-x"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="12" x2="18" y2="12"></line></svg>
                   </button>
                 </span>
               }
             </div>
+            @if (selectionModeSignal() === 'exclude') {
+              <p class="help-text text-danger mt-xs">Note: All other entities in the country will be automatically included.</p>
+            }
           </div>
         }
       </div>
 
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" (click)="closeModal()">Cancel</button>
-        <button type="submit" class="btn btn-primary" [disabled]="form.invalid || selectedEntities().length === 0 || isSaving()">
+        <button type="submit" class="btn btn-primary" [disabled]="form.invalid || (selectedEntities().length === 0 && selectionModeSignal() === 'include') || isSaving()">
           {{ isSaving() ? 'Saving...' : (editingGroupId() ? 'Update Group' : 'Create Geographic Group') }}
         </button>
       </div>

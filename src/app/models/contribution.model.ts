@@ -3,14 +3,19 @@ export enum ContributionType {
   Employee = 'Employee'
 }
 
+export enum CalculationType {
+  Fixed = 'Fixed',
+  Percentage = 'Percentage'
+}
+
 export interface Slab {
-  minimum: number;
-  maximum: number;
-  valueSourceFieldId: string;
-  calculationType: 'Fixed' | 'Percentage';
-  value: number;
-  ceiling: number;
-  wageTypeFieldId: string;
+  tierLowerLimit: number;
+  tierUpperLimit: number;
+  tierDeterminationFieldId: string;
+  calculationType: CalculationType;
+  rateOrAmount: number;
+  calculationBasisFieldId: string;
+  contributionCap: number;
 }
 
 export interface Rule {

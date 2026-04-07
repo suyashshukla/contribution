@@ -11,6 +11,22 @@
   border-bottom: 1px solid var(--border-color);
 }
 
+.header-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-sm);
+}
+
+.header-actions .btn {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.mr-md {
+  margin-right: var(--space-md);
+}
+
 .page-kicker {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
@@ -290,6 +306,57 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: var(--space-md);
+}
+
+.sentence-container {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs);
+  line-height: 2.2;
+  font-size: var(--font-size-base);
+  color: var(--text-heading);
+}
+
+.sentence-text {
+  white-space: nowrap;
+}
+
+.sentence-input {
+  display: inline-flex;
+  min-width: 100px;
+  vertical-align: middle;
+}
+
+.sentence-input-xs {
+  width: 60px;
+}
+
+.sentence-input-sm {
+  width: 90px;
+}
+
+.sentence-input-md {
+  width: 130px;
+}
+
+.sentence-input-lg {
+  width: 180px;
+}
+
+.sentence-input-xlg {
+  width: 220px;
+}
+
+.sentence-input .input, 
+.sentence-input .ng-select {
+  width: 100%;
+  margin: 0;
+}
+
+.sentence-input .ng-select.ng-select-single .ng-select-container {
+  height: 34px;
+  min-height: 34px;
 }
 
 .input-group {

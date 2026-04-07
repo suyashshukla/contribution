@@ -19,7 +19,7 @@ export class ModalService {
   modalConfig = signal<{
     title: string;
     side?: 'left' | 'right';
-    size?: 'sm' | 'md' | 'lg';
+    size?: 'sm' | 'md' | 'lg' | 'xl';
     template?: TemplateRef<any>;
   }>({ title: '' });
 
@@ -28,7 +28,7 @@ export class ModalService {
   isConfirmOpen = this._isConfirmOpen.asReadonly();
   confirmConfig = signal<ConfirmConfig | null>(null);
 
-  open(modalConfig: { title: string; side?: 'left' | 'right'; size?: 'sm' | 'md' | 'lg'; template: TemplateRef<any> }) {
+  open(modalConfig: { title: string; side?: 'left' | 'right'; size?: 'sm' | 'md' | 'lg' | 'xl'; template: TemplateRef<any> }) {
     this.modalConfig.set(modalConfig);
     this._isModalOpen.set(true);
     document.body.style.overflow = 'hidden';

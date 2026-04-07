@@ -47,9 +47,6 @@ import { CommonModule } from '@angular/common';
 
     .modal-window {
       position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
       background-color: var(--bg-surface);
       border-radius: var(--radius-lg);
       box-shadow: var(--shadow-xl);
@@ -62,18 +59,23 @@ import { CommonModule } from '@angular/common';
       max-width: 90vw;
     }
 
+    .modal-window:not(.modal-side-right):not(.modal-side-left) {
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
     .modal-size-sm { width: 400px; }
     .modal-size-md { width: 600px; }
     .modal-size-lg { width: 800px; }
+    .modal-size-xl { width: 950px; }
 
     .modal-side-right, .modal-side-left {
       top: 0;
-      transform: none;
       height: 100vh;
       max-height: 100vh;
       border-radius: 0;
-      width: 600px;
-      max-width: 90vw;
+      max-width: none;
     }
 
     .modal-side-right {
@@ -160,7 +162,7 @@ import { CommonModule } from '@angular/common';
 })
 export class UiModalComponent {
   title = input.required<string>();
-  size = input<'sm' | 'md' | 'lg'>('md');
+  size = input<'sm' | 'md' | 'lg' | 'xl'>('md');
   side = input<'left' | 'right'>();
   close = output<void>();
   

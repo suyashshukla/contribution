@@ -1,7 +1,7 @@
-import { Component, ChangeDetectionStrategy, inject, signal, input, effect, ViewChild, TemplateRef } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, signal, input, effect, ViewChild, TemplateRef, computed, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import { FormBuilder, FormArray, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormArray, ReactiveFormsModule, Validators, FormGroup } from '@angular/forms';
 import { FirestoreService } from '../../services/firestore.service';
 import { ModalService } from '../../services/modal.service';
 import { ToastService } from '../../services/toast.service';
@@ -24,6 +24,7 @@ export class CountryWizardComponent {
   private firestore = inject(FirestoreService);
   private router = inject(Router);
   private formBuilder = inject(FormBuilder);
+  private changeDetectorRef = inject(ChangeDetectorRef);
   modal = inject(ModalService);
   private toast = inject(ToastService);
 
@@ -36,6 +37,9 @@ export class CountryWizardComponent {
 
   editingFieldIndex = signal<number | null>(null); // For managing salary fields
   globalCountries = GLOBAL_COUNTRIES; // For ng-select
+
+  // Signal to track FormArray controls for robust UI updates
+  fieldsSignal = signal<FormGroup[]>([]);
 
   // Form for country details and salary fields (Step 1)
   countryForm = this.formBuilder.group({
@@ -58,9 +62,14 @@ export class CountryWizardComponent {
       if (currentCountryId && currentCountryId !== 'new') {
         this.loadCountryConfig(currentCountryId);
       } else {
-        // Reset form for new country
-        this.countryForm.reset({ countryName: '', countryCode: '' });
+        // Reset form for new country, but check query params first
+        const queryParameters = this.activatedRoute.snapshot.queryParams;
+        this.countryForm.reset({ 
+          countryName: queryParameters['name'] || '', 
+          countryCode: queryParameters['code'] || '' 
+        });
         this.fields.clear();
+        this.updateFieldsSignal();
       }
     });
 
@@ -92,6 +101,7 @@ export class CountryWizardComponent {
             type: [field.type, Validators.required]
           }));
         });
+        this.updateFieldsSignal();
       });
   }
 
@@ -99,11 +109,16 @@ export class CountryWizardComponent {
     return this.countryForm.get('fields') as FormArray;
   }
 
-  onCountrySelect(countryItem: any) {
-    if (countryItem) {
+  private updateFieldsSignal() {
+    this.fieldsSignal.set([...this.fields.controls] as FormGroup[]);
+    this.changeDetectorRef.markForCheck();
+  }
+
+  onCountrySelect(countryOption: any) {
+    if (countryOption) {
       this.countryForm.patchValue({
-        countryName: countryItem.name,
-        countryCode: countryItem.code
+        countryName: countryOption.name,
+        countryCode: countryOption.code
       });
     } else {
       this.countryForm.patchValue({
@@ -111,6 +126,7 @@ export class CountryWizardComponent {
         countryCode: ''
       });
     }
+    this.changeDetectorRef.markForCheck();
   }
 
   openFieldModal(fieldIndex: number | null = null) {
@@ -145,11 +161,13 @@ export class CountryWizardComponent {
         type: [fieldValue.type, Validators.required]
       }));
     }
+    this.updateFieldsSignal();
     this.modal.close();
   }
 
   removeField(fieldIndex: number) {
     this.fields.removeAt(fieldIndex);
+    this.updateFieldsSignal();
   }
 
   // --- Wizard Navigation & Overall Save ---
@@ -157,6 +175,7 @@ export class CountryWizardComponent {
   setStep(stepNumber: number) {
     if (stepNumber < 1 || stepNumber > 3) return;
     this.currentStep.set(stepNumber);
+    this.changeDetectorRef.markForCheck();
   }
 
   async next() {
@@ -169,6 +188,7 @@ export class CountryWizardComponent {
         } else {
           this.toast.error('Please fill in all required country details.');
         }
+        this.changeDetectorRef.markForCheck();
         return;
       }
       await this.saveCountryDetails(); // Save step 1 data before proceeding
@@ -188,6 +208,7 @@ export class CountryWizardComponent {
   async saveCountryDetails() {
     try {
       this.isSaving.set(true);
+      this.changeDetectorRef.markForCheck();
       const countryConfig = this.countryForm.getRawValue() as CountryConfig;
       const currentCountryId = this.countryId();
       
@@ -205,6 +226,7 @@ export class CountryWizardComponent {
       this.toast.error(error.message || 'Save operation failed. Please check your connection.');
     } finally {
       this.isSaving.set(false);
+      this.changeDetectorRef.markForCheck();
     }
   }
 

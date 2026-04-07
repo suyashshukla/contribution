@@ -36,6 +36,7 @@ export class GeoGroupsComponent {
   states = signal<string[]>([]);
   cities = signal<string[]>([]);
   selectedEntities = signal<string[]>([]);
+  globalCountries = GLOBAL_COUNTRIES;
   
   countryName = computed(() => {
     const currentCountryCode = this.countryCode();
@@ -54,13 +55,16 @@ export class GeoGroupsComponent {
   form = this.formBuilder.group({
     name: ['', Validators.required],
     type: ['country' as GeoType, Validators.required],
-    tempState: [''],
-    tempCity: ['']
+    selectionMode: ['include' as 'include' | 'exclude'],
+    tempCountry: [null as string | null],
+    tempState: [null as string | null],
+    tempCity: [null as string | null]
   });
 
   // Convert form values to signals for proper effect tracking
   typeSignal = toSignal(this.form.controls.type.valueChanges, { initialValue: 'country' as GeoType });
-  stateSignal = toSignal(this.form.controls.tempState.valueChanges, { initialValue: '' });
+  stateSignal = toSignal(this.form.controls.tempState.valueChanges, { initialValue: null as string | null });
+  selectionModeSignal = toSignal(this.form.controls.selectionMode.valueChanges, { initialValue: 'include' as 'include' | 'exclude' });
 
   constructor() {
     // Load states when country or type changes
@@ -118,7 +122,7 @@ export class GeoGroupsComponent {
   addEntity() {
     const type = this.form.controls.type.value;
     let value = '';
-    if (type === 'country') value = this.countryName() || '';
+    if (type === 'country') value = this.form.controls.tempCountry.value || '';
     if (type === 'state') value = this.form.controls.tempState.value || '';
     if (type === 'city') value = this.form.controls.tempCity.value || '';
 
@@ -133,7 +137,7 @@ export class GeoGroupsComponent {
 
   openAddModal() {
     this.editingGroupId.set(null);
-    this.form.reset({ type: 'country', name: '', tempState: '', tempCity: '' });
+    this.form.reset({ type: 'country', name: '', selectionMode: 'include', tempCountry: null, tempState: null, tempCity: null });
     this.selectedEntities.set([]);
     this.modal.open({
       title: 'Create geographic group',
@@ -146,8 +150,10 @@ export class GeoGroupsComponent {
     this.form.reset({
       name: geoGroup.name,
       type: geoGroup.type,
-      tempState: '',
-      tempCity: ''
+      selectionMode: geoGroup.selectionMode,
+      tempCountry: null,
+      tempState: null,
+      tempCity: null
     });
     this.selectedEntities.set([...geoGroup.entities]);
     this.modal.open({
@@ -161,11 +167,13 @@ export class GeoGroupsComponent {
     
     try {
       this.isSaving.set(true);
-      const { name, type } = this.form.getRawValue();
+      const { name, type, selectionMode } = this.form.getRawValue();
+      
       const geoGroup: GeoGroup = {
         countryCode: this.countryCode()!,
         name: name!,
         type: type as GeoType,
+        selectionMode: selectionMode as 'include' | 'exclude',
         entities: this.selectedEntities()
       };
       

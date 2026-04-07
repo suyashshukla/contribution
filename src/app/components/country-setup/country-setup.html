@@ -17,7 +17,23 @@
         <h2 class="section-title">Jurisdiction Registry</h2>
         <p class="section-description">Manage existing country configurations or initialize a new registry.</p>
       </div>
-      <a routerLink="/manage-country/new" class="btn btn-primary">Initialize New Country</a>
+      <div class="country-selector-wrapper">
+        <label class="label mb-xs">Initialize New Jurisdiction</label>
+        <ng-select 
+          [items]="globalCountries" 
+          bindLabel="name"
+          placeholder="Search country..."
+          (change)="onCountrySelect($event)"
+          class="country-select-dropdown"
+          appendTo="body">
+          <ng-template ng-option-tmp let-item="item">
+            <div class="country-option">
+              <span class="flag">{{ item.flag }}</span>
+              <span class="name">{{ item.name }}</span>
+            </div>
+          </ng-template>
+        </ng-select>
+      </div>
     </div>
 
     <div class="country-grid">
@@ -51,8 +67,7 @@
       } @empty {
         <div class="empty-state">
           <p class="empty-message">No registries found</p>
-          <p class="empty-subtext">You haven't configured any country schemas yet.</p>
-          <a routerLink="/manage-country/new" class="btn btn-primary">Create your first schema</a>
+          <p class="empty-subtext">You haven't configured any country schemas yet. Use the dropdown above to initialize one.</p>
         </div>
       }
     </div>

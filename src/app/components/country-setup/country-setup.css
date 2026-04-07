@@ -85,6 +85,24 @@
   color: var(--text-muted);
 }
 
+.country-selector-wrapper {
+  width: 300px;
+}
+
+.country-select-dropdown {
+  width: 100%;
+}
+
+.country-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.country-option .flag {
+  font-size: 1.2em;
+}
+
 .country-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -236,6 +254,10 @@
     flex-direction: column;
     align-items: flex-start;
     gap: var(--space-md);
+  }
+
+  .country-selector-wrapper {
+    width: 100%;
   }
 
   .country-grid {

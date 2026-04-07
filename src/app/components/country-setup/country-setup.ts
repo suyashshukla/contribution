@@ -1,6 +1,6 @@
 import { Component, ChangeDetectionStrategy, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
 import { FirestoreService } from '../../services/firestore.service';
 import { ModalService } from '../../services/modal.service';
 import { CountryConfig } from '../../models/country-config.model';
@@ -17,6 +17,7 @@ import { NgSelectModule } from '@ng-select/ng-select';
 export class CountrySetupComponent {
   private firestore = inject(FirestoreService);
   private modal = inject(ModalService);
+  private router = inject(Router);
 
   countries$ = this.firestore.getCollection<CountryConfig>('countryConfigs');
   globalCountries = GLOBAL_COUNTRIES;
@@ -26,5 +27,16 @@ export class CountrySetupComponent {
     const countryItem = this.globalCountries.find(country => country.code === countryCode || country.iso2 === countryCode);
     const isoCode = countryItem?.iso2 || countryCode;
     return `https://flagcdn.com/w40/${isoCode.toLowerCase()}.png`;
+  }
+
+  onCountrySelect(countryItem: any) {
+    if (countryItem) {
+      this.router.navigate(['/manage-country', 'new'], { 
+        queryParams: { 
+          name: countryItem.name, 
+          code: countryItem.code 
+        } 
+      });
+    }
   }
 }
