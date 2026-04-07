@@ -41,7 +41,17 @@
           @for (field of selectedCountry()!.fields; track field.id) {
             <div class="form-group">
               <label [for]="field.id" class="label">{{ field.name }}</label>
-              <input [id]="field.id" type="number" [formControlName]="field.id" class="input" placeholder="0.00">
+              @switch (field.type) {
+                @case ('date') {
+                  <input [id]="field.id" type="date" [formControlName]="field.id" class="input">
+                }
+                @case ('string') {
+                  <input [id]="field.id" type="text" [formControlName]="field.id" class="input" placeholder="Enter text">
+                }
+                @default {
+                  <input [id]="field.id" type="number" [formControlName]="field.id" class="input" placeholder="0.00">
+                }
+              }
             </div>
           }
           <button type="submit" class="btn btn-primary btn-full" [disabled]="dynamicForm.invalid">

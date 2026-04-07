@@ -61,7 +61,19 @@ export class CalculationEngineComponent {
   private buildForm(config: CountryConfig) {
     const group: any = {};
     config.fields.forEach(field => {
-      group[field.id] = [0, [Validators.required, Validators.min(0)]];
+      switch (field.type) {
+        case 'numeric':
+          group[field.id] = [0, [Validators.required, Validators.min(0)]];
+          break;
+        case 'date':
+          group[field.id] = ['', [Validators.required]];
+          break;
+        case 'string':
+          group[field.id] = ['', [Validators.required]];
+          break;
+        default:
+          group[field.id] = ['', [Validators.required]];
+      }
     });
     this.dynamicForm = this.fb.group(group);
   }

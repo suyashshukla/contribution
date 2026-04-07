@@ -1,7 +1,7 @@
 export interface CountryField {
   id: string;
   name: string;
-  type: 'numeric' | 'string';
+  type: 'numeric' | 'date' | 'string';
 }
 
 export interface CountryConfig {

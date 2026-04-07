@@ -211,6 +211,22 @@
   color: var(--text-muted);
 }
 
+/* Date input styling */
+input[type="date"] {
+  cursor: pointer;
+  color-scheme: light;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  filter: opacity(0.6);
+  transition: var(--transition-ease);
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  filter: opacity(1);
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .calculation-layout {
