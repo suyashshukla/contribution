@@ -4,7 +4,7 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { FirestoreService } from '../../services/firestore.service';
 import { CalculationService, CalculationResult } from '../../services/calculation.service';
 import { CountryConfig } from '../../models/country-config.model';
-import { Contribution } from '../../models/contribution.model';
+import { Contribution, ContributionType } from '../../models/contribution.model';
 import { GeoGroup } from '../../models/geo-group.model';
 import { GLOBAL_COUNTRIES } from '../../models/countries.data';
 import { NgSelectModule } from '@ng-select/ng-select';
@@ -19,36 +19,43 @@ import { take, combineLatest, map } from 'rxjs';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CalculationEngineComponent {
-  private fb = inject(FormBuilder);
+  private formBuilder = inject(FormBuilder);
   private firestore = inject(FirestoreService);
-  private calcService = inject(CalculationService);
+  private calculationService = inject(CalculationService);
 
+  ContributionType = ContributionType;
   countries$ = this.firestore.getCollection<CountryConfig>('countryConfigs');
   globalCountries = GLOBAL_COUNTRIES;
   
   selectedCountry = signal<CountryConfig | null>(null);
   results = signal<CalculationResult[]>([]);
-  dynamicForm: FormGroup = this.fb.group({});
+  runDate = signal<string>(new Date().toISOString().split('T')[0]);
+  dynamicForm: FormGroup = this.formBuilder.group({});
 
   employerTotal = computed(() => 
-    this.results().filter(r => r.type === 'Employer').reduce((acc, curr) => acc + curr.amount, 0)
+    this.results().filter(result => result.type === ContributionType.Employer).reduce((accumulator, currentValue) => accumulator + currentValue.amount, 0)
   );
 
   employeeTotal = computed(() => 
-    this.results().filter(r => r.type === 'Employee').reduce((acc, curr) => acc + curr.amount, 0)
+    this.results().filter(result => result.type === ContributionType.Employee).reduce((accumulator, currentValue) => accumulator + currentValue.amount, 0)
   );
 
-  getFlagUrl(code: string | undefined) {
-    if (!code) return '';
-    const country = this.globalCountries.find(c => c.code === code || c.iso2 === code);
-    const iso2 = country?.iso2 || code;
-    return `https://flagcdn.com/w40/${iso2.toLowerCase()}.png`;
+  getFlagUrl(countryCode: string | undefined) {
+    if (!countryCode) return '';
+    const country = this.globalCountries.find(countryItem => countryItem.code === countryCode || countryItem.iso2 === countryCode);
+    const isoCode = country?.iso2 || countryCode;
+    return `https://flagcdn.com/w40/${isoCode.toLowerCase()}.png`;
+  }
+
+  onRunDateChange(event: Event) {
+    const target = event.target as HTMLInputElement;
+    this.runDate.set(target.value);
   }
 
   onCountryChange(country: CountryConfig | null) {
     if (!country) {
       this.selectedCountry.set(null);
-      this.dynamicForm = this.fb.group({});
+      this.dynamicForm = this.formBuilder.group({});
       this.results.set([]);
       return;
     }
@@ -58,24 +65,24 @@ export class CalculationEngineComponent {
     this.results.set([]);
   }
 
-  private buildForm(config: CountryConfig) {
-    const group: any = {};
-    config.fields.forEach(field => {
+  private buildForm(countryConfig: CountryConfig) {
+    const formGroup: any = {};
+    countryConfig.fields.forEach(field => {
       switch (field.type) {
         case 'numeric':
-          group[field.id] = [0, [Validators.required, Validators.min(0)]];
+          formGroup[field.id] = [0, [Validators.required, Validators.min(0)]];
           break;
         case 'date':
-          group[field.id] = ['', [Validators.required]];
+          formGroup[field.id] = ['', [Validators.required]];
           break;
         case 'string':
-          group[field.id] = ['', [Validators.required]];
+          formGroup[field.id] = ['', [Validators.required]];
           break;
         default:
-          group[field.id] = ['', [Validators.required]];
+          formGroup[field.id] = ['', [Validators.required]];
       }
     });
-    this.dynamicForm = this.fb.group(group);
+    this.dynamicForm = this.formBuilder.group(formGroup);
   }
 
   async calculate() {
@@ -83,13 +90,14 @@ export class CalculationEngineComponent {
 
     const countryCode = this.selectedCountry()!.countryCode;
     const inputs = this.dynamicForm.getRawValue();
+    const runDate = this.runDate();
 
     combineLatest([
       this.firestore.getCollectionByFilter<Contribution>('contributions', 'countryCode', countryCode),
       this.firestore.getCollectionByFilter<GeoGroup>('geoGroups', 'countryCode', countryCode)
     ]).pipe(take(1)).subscribe(([contributions, geoGroups]) => {
-      const calcResults = this.calcService.calculate(contributions, inputs);
-      this.results.set(calcResults);
+      const calculationResults = this.calculationService.calculate(contributions, inputs, runDate);
+      this.results.set(calculationResults);
     });
   }
 }

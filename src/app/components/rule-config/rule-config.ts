@@ -6,7 +6,7 @@ import { ModalService } from '../../services/modal.service';
 import { ToastService } from '../../services/toast.service';
 import { CountryConfig } from '../../models/country-config.model';
 import { GeoGroup } from '../../models/geo-group.model';
-import { Contribution } from '../../models/contribution.model';
+import { Contribution, ContributionType } from '../../models/contribution.model';
 import { GLOBAL_COUNTRIES } from '../../models/countries.data';
 import { NgSelectModule } from '@ng-select/ng-select';
 import { take, map, switchMap, of } from 'rxjs';
@@ -21,7 +21,7 @@ import { toObservable } from '@angular/core/rxjs-interop';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RuleConfigComponent {
-  private fb = inject(FormBuilder);
+  private formBuilder = inject(FormBuilder);
   private firestore = inject(FirestoreService);
   protected modal = inject(ModalService);
   private toast = inject(ToastService);
@@ -29,6 +29,7 @@ export class RuleConfigComponent {
   @ViewChild('setModal') setModalTemplate!: TemplateRef<any>;
   @ViewChild('manageRulesModal') manageRulesModalTemplate!: TemplateRef<any>;
 
+  ContributionType = ContributionType;
   countryCode = input<string | null | undefined>(null);
   selectedCountry = signal<CountryConfig | null>(null);
   isSaving = signal(false);
@@ -39,48 +40,48 @@ export class RuleConfigComponent {
   editingStrategyIndex = signal<number | null>(null);
 
   geoGroups$ = toObservable(this.countryCode).pipe(
-    switchMap(code => {
-      if (!code) return of([]);
+    switchMap(currentCountryCode => {
+      if (!currentCountryCode) return of([]);
       return this.firestore.getCollection<GeoGroup>('geoGroups').pipe(
-        map(groups => groups.filter(g => g.countryCode === code))
+        map(geoGroups => geoGroups.filter(geoGroup => geoGroup.countryCode === currentCountryCode))
       );
     })
   );
 
   contributions$ = toObservable(this.countryCode).pipe(
-    switchMap(code => {
-      if (!code) return of([]);
-      return this.firestore.getCollectionByFilter<Contribution>('contributions', 'countryCode', code);
+    switchMap(currentCountryCode => {
+      if (!currentCountryCode) return of([]);
+      return this.firestore.getCollectionByFilter<Contribution>('contributions', 'countryCode', currentCountryCode);
     })
   );
 
-  setForm = this.fb.group({
+  setForm = this.formBuilder.group({
     name: ['', Validators.required]
   });
 
-  strategyForm = this.fb.group({
+  strategyForm = this.formBuilder.group({
     name: ['', Validators.required],
-    type: ['Employer', Validators.required],
+    type: [ContributionType.Employer, Validators.required],
     effectiveFrom: [new Date().toISOString().split('T')[0], Validators.required],
     geoGroupId: ['', Validators.required],
-    slabs: this.fb.array([])
+    slabs: this.formBuilder.array([])
   });
 
   constructor() {
     effect(() => {
-      const code = this.countryCode();
-      if (code) {
-        this.loadCountrySchema(code);
+      const currentCountryCode = this.countryCode();
+      if (currentCountryCode) {
+        this.loadCountrySchema(currentCountryCode);
       }
     });
   }
 
-  loadCountrySchema(code: string) {
-    this.firestore.getCollectionByFilter<CountryConfig>('countryConfigs', 'countryCode', code)
+  loadCountrySchema(currentCountryCode: string) {
+    this.firestore.getCollectionByFilter<CountryConfig>('countryConfigs', 'countryCode', currentCountryCode)
       .pipe(take(1))
-      .subscribe(configs => {
-        if (configs.length > 0) {
-          this.selectedCountry.set(configs[0]);
+      .subscribe(countryConfigs => {
+        if (countryConfigs.length > 0) {
+          this.selectedCountry.set(countryConfigs[0]);
         }
       });
   }
@@ -89,17 +90,17 @@ export class RuleConfigComponent {
     return this.strategyForm.get('slabs') as FormArray;
   }
 
-  addSlab(data?: any) {
-    const slabForm = this.fb.group({
-      min: [data?.min ?? 0, Validators.required],
-      max: [data?.max ?? 9999999, Validators.required],
-      valueSourceFieldId: [data?.valueSourceFieldId ?? '', Validators.required],
-      calcType: [data?.calcType ?? 'Percentage', Validators.required],
-      val: [data?.val ?? 0, Validators.required],
-      ceiling: [data?.ceiling ?? 0],
-      wageTypeFieldId: [data?.wageTypeFieldId ?? '', Validators.required]
+  addSlab(initialData?: any) {
+    const slabFormGroup = this.formBuilder.group({
+      minimum: [initialData?.minimum ?? 0, Validators.required],
+      maximum: [initialData?.maximum ?? 9999999, Validators.required],
+      valueSourceFieldId: [initialData?.valueSourceFieldId ?? '', Validators.required],
+      calculationType: [initialData?.calculationType ?? 'Percentage', Validators.required],
+      value: [initialData?.value ?? 0, Validators.required],
+      ceiling: [initialData?.ceiling ?? 0],
+      wageTypeFieldId: [initialData?.wageTypeFieldId ?? '', Validators.required]
     });
-    this.slabs.push(slabForm);
+    this.slabs.push(slabFormGroup);
   }
 
   openCreateModal() {
@@ -142,24 +143,24 @@ export class RuleConfigComponent {
     });
   }
 
-  toggleStrategyForm(index: number | null = null) {
-    this.editingStrategyIndex.set(index);
+  toggleStrategyForm(ruleIndex: number | null = null) {
+    this.editingStrategyIndex.set(ruleIndex);
     this.slabs.clear();
 
-    if (index !== null) {
-      const strategy = this.activeContribution()?.rules[index];
-      if (strategy) {
+    if (ruleIndex !== null) {
+      const ruleStrategy = this.activeContribution()?.rules[ruleIndex];
+      if (ruleStrategy) {
         this.strategyForm.patchValue({
-          name: strategy.name,
-          type: strategy.type,
-          effectiveFrom: strategy.effectiveFrom,
-          geoGroupId: strategy.geoGroupId
+          name: ruleStrategy.name,
+          type: ruleStrategy.type,
+          effectiveFrom: ruleStrategy.effectiveFrom,
+          geoGroupId: ruleStrategy.geoGroupId
         });
-        strategy.slabs.forEach(s => this.addSlab(s));
+        ruleStrategy.slabs.forEach(slab => this.addSlab(slab));
       }
     } else {
       this.strategyForm.reset({
-        type: 'Employer',
+        type: ContributionType.Employer,
         effectiveFrom: new Date().toISOString().split('T')[0]
       });
       this.addSlab();
@@ -173,15 +174,15 @@ export class RuleConfigComponent {
     try {
       this.isSaving.set(true);
       const contribution = this.activeContribution()!;
-      const strategy = this.strategyForm.getRawValue();
-      const index = this.editingStrategyIndex();
+      const ruleStrategy = this.strategyForm.getRawValue();
+      const ruleIndex = this.editingStrategyIndex();
       
       const updatedRules = [...(contribution.rules || [])];
       
-      if (index !== null) {
-        updatedRules[index] = strategy as any;
+      if (ruleIndex !== null) {
+        updatedRules[ruleIndex] = ruleStrategy as any;
       } else {
-        updatedRules.push(strategy as any);
+        updatedRules.push(ruleStrategy as any);
       }
 
       await this.firestore.updateDocument('contributions', contribution.id!, { rules: updatedRules });
@@ -197,7 +198,7 @@ export class RuleConfigComponent {
     }
   }
 
-  async removeStrategy(index: number) {
+  async removeStrategy(ruleIndex: number) {
     this.modal.confirm({
       title: 'Remove strategy',
       message: 'Are you sure you want to remove this rule strategy?',
@@ -205,7 +206,7 @@ export class RuleConfigComponent {
       onConfirm: async () => {
         const contribution = this.activeContribution()!;
         const updatedRules = [...contribution.rules];
-        updatedRules.splice(index, 1);
+        updatedRules.splice(ruleIndex, 1);
         
         await this.firestore.updateDocument('contributions', contribution.id!, { rules: updatedRules });
         this.activeContribution.set({ ...contribution, rules: updatedRules });
@@ -213,28 +214,28 @@ export class RuleConfigComponent {
     });
   }
 
-  requestDelete(id: string) {
+  requestDelete(contributionId: string) {
     this.modal.confirm({
       title: 'Archive set',
       message: 'Archiving this contribution set removes it from the active payroll processor immediately.',
       confirmLabel: 'Archive rule set',
       confirmBtnClass: 'btn-danger',
-      onConfirm: () => this.confirmDelete(id)
+      onConfirm: () => this.confirmDelete(contributionId)
     });
   }
 
-  async confirmDelete(id: string) {
-    await this.firestore.deleteDocument('contributions', id);
+  async confirmDelete(contributionId: string) {
+    await this.firestore.deleteDocument('contributions', contributionId);
   }
 
   closeModal() {
     this.modal.close();
   }
 
-  getFlagUrl(code: string | null | undefined) {
-    if (!code) return '';
-    const country = GLOBAL_COUNTRIES.find(c => c.code === code || c.iso2 === code);
-    const iso2 = country?.iso2 || code;
-    return `https://flagcdn.com/w40/${iso2.toLowerCase()}.png`;
+  getFlagUrl(countryCode: string | null | undefined) {
+    if (!countryCode) return '';
+    const country = GLOBAL_COUNTRIES.find(currentCountry => currentCountry.code === countryCode || currentCountry.iso2 === countryCode);
+    const isoCode = country?.iso2 || countryCode;
+    return `https://flagcdn.com/w40/${isoCode.toLowerCase()}.png`;
   }
 }

@@ -76,14 +76,14 @@
 <app-toast-container></app-toast-container>
 
 <!-- Root Level Modal Container -->
-@if (modal.isOpen()) {
+@if (modal.isModalOpen()) {
   <app-ui-modal 
-    [title]="modal.config().title" 
-    [side]="modal.config().side" 
-    [size]="modal.config().size || 'md'"
+    [title]="modal.modalConfig().title" 
+    [side]="modal.modalConfig().side" 
+    [size]="modal.modalConfig().size || 'md'"
     (close)="modal.close()">
-    @if (modal.config().template) {
-      <ng-container [ngTemplateOutlet]="modal.config().template!"></ng-container>
+    @if (modal.modalConfig().template) {
+      <ng-container [ngTemplateOutlet]="modal.modalConfig().template!"></ng-container>
     }
   </app-ui-modal>
 }

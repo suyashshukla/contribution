@@ -20,10 +20,10 @@ import { take, filter } from 'rxjs';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CountryWizardComponent {
-  private route = inject(ActivatedRoute);
+  private activatedRoute = inject(ActivatedRoute);
   private firestore = inject(FirestoreService);
   private router = inject(Router);
-  private fb = inject(FormBuilder);
+  private formBuilder = inject(FormBuilder);
   modal = inject(ModalService);
   private toast = inject(ToastService);
 
@@ -38,14 +38,14 @@ export class CountryWizardComponent {
   globalCountries = GLOBAL_COUNTRIES; // For ng-select
 
   // Form for country details and salary fields (Step 1)
-  countryForm = this.fb.group({
+  countryForm = this.formBuilder.group({
     countryName: ['', Validators.required],
     countryCode: ['', Validators.required],
-    fields: this.fb.array([], Validators.minLength(1)) // For salary fields
+    fields: this.formBuilder.array([], Validators.minLength(1)) // For salary fields
   });
 
   // Form for adding/editing a single salary field
-  fieldEditForm = this.fb.group({
+  fieldEditForm = this.formBuilder.group({
     id: ['', Validators.required],
     name: ['', Validators.required],
     type: ['numeric', Validators.required]
@@ -54,9 +54,9 @@ export class CountryWizardComponent {
   constructor() {
     // Effect to load country data when countryId changes (from route)
     effect(() => {
-      const id = this.countryId();
-      if (id && id !== 'new') {
-        this.loadCountryConfig(id);
+      const currentCountryId = this.countryId();
+      if (currentCountryId && currentCountryId !== 'new') {
+        this.loadCountryConfig(currentCountryId);
       } else {
         // Reset form for new country
         this.countryForm.reset({ countryName: '', countryCode: '' });
@@ -65,31 +65,31 @@ export class CountryWizardComponent {
     });
 
     // Subscribe to route params to get countryId
-    this.route.params.subscribe(params => {
-      const id = params['id'];
-      if (id) {
-        this.countryId.set(id);
+    this.activatedRoute.params.subscribe(parameters => {
+      const currentCountryId = parameters['id'];
+      if (currentCountryId) {
+        this.countryId.set(currentCountryId);
       }
     });
   }
 
   // --- Step 1 related methods ---
 
-  loadCountryConfig(id: string) {
-    this.firestore.getDocument<CountryConfig>('countryConfigs', id)
+  loadCountryConfig(countryConfigId: string) {
+    this.firestore.getDocument<CountryConfig>('countryConfigs', countryConfigId)
       .pipe(take(1), filter(Boolean))
-      .subscribe(config => {
-        this.selectedCountry.set(config);
+      .subscribe(countryConfig => {
+        this.selectedCountry.set(countryConfig);
         this.countryForm.patchValue({
-          countryName: config.countryName,
-          countryCode: config.countryCode
+          countryName: countryConfig.countryName,
+          countryCode: countryConfig.countryCode
         });
         this.fields.clear();
-        config.fields.forEach(f => {
-          this.fields.push(this.fb.group({
-            id: [f.id, Validators.required],
-            name: [f.name, Validators.required],
-            type: [f.type, Validators.required]
+        countryConfig.fields.forEach(field => {
+          this.fields.push(this.formBuilder.group({
+            id: [field.id, Validators.required],
+            name: [field.name, Validators.required],
+            type: [field.type, Validators.required]
           }));
         });
       });
@@ -99,11 +99,11 @@ export class CountryWizardComponent {
     return this.countryForm.get('fields') as FormArray;
   }
 
-  onCountrySelect(country: any) {
-    if (country) {
+  onCountrySelect(countryItem: any) {
+    if (countryItem) {
       this.countryForm.patchValue({
-        countryName: country.name,
-        countryCode: country.code
+        countryName: countryItem.name,
+        countryCode: countryItem.code
       });
     } else {
       this.countryForm.patchValue({
@@ -113,15 +113,15 @@ export class CountryWizardComponent {
     }
   }
 
-  openFieldModal(index: number | null = null) {
-    this.editingFieldIndex.set(index);
-    if (index !== null) {
-      this.fieldEditForm.patchValue(this.fields.at(index).getRawValue());
+  openFieldModal(fieldIndex: number | null = null) {
+    this.editingFieldIndex.set(fieldIndex);
+    if (fieldIndex !== null) {
+      this.fieldEditForm.patchValue(this.fields.at(fieldIndex).getRawValue());
     } else {
       this.fieldEditForm.reset({ type: 'numeric' });
     }
     this.modal.open({
-      title: index !== null ? 'Edit Salary Field' : 'Add Salary Field',
+      title: fieldIndex !== null ? 'Edit Salary Field' : 'Add Salary Field',
       template: this.fieldModalTemplate,
       size: 'sm'
     });
@@ -133,30 +133,30 @@ export class CountryWizardComponent {
       return;
     }
     
-    const fieldVal = this.fieldEditForm.getRawValue();
-    const index = this.editingFieldIndex();
+    const fieldValue = this.fieldEditForm.getRawValue();
+    const fieldIndex = this.editingFieldIndex();
 
-    if (index !== null) {
-      this.fields.at(index).patchValue(fieldVal);
+    if (fieldIndex !== null) {
+      this.fields.at(fieldIndex).patchValue(fieldValue);
     } else {
-      this.fields.push(this.fb.group({
-        id: [fieldVal.id, Validators.required],
-        name: [fieldVal.name, Validators.required],
-        type: [fieldVal.type, Validators.required]
+      this.fields.push(this.formBuilder.group({
+        id: [fieldValue.id, Validators.required],
+        name: [fieldValue.name, Validators.required],
+        type: [fieldValue.type, Validators.required]
       }));
     }
     this.modal.close();
   }
 
-  removeField(index: number) {
-    this.fields.removeAt(index);
+  removeField(fieldIndex: number) {
+    this.fields.removeAt(fieldIndex);
   }
 
   // --- Wizard Navigation & Overall Save ---
 
-  setStep(step: number) {
-    if (step < 1 || step > 3) return;
-    this.currentStep.set(step);
+  setStep(stepNumber: number) {
+    if (stepNumber < 1 || stepNumber > 3) return;
+    this.currentStep.set(stepNumber);
   }
 
   async next() {
@@ -188,15 +188,15 @@ export class CountryWizardComponent {
   async saveCountryDetails() {
     try {
       this.isSaving.set(true);
-      const config = this.countryForm.getRawValue() as CountryConfig;
-      const id = this.countryId();
+      const countryConfig = this.countryForm.getRawValue() as CountryConfig;
+      const currentCountryId = this.countryId();
       
-      if (id && id !== 'new') {
-        await this.firestore.updateDocument('countryConfigs', id, config);
+      if (currentCountryId && currentCountryId !== 'new') {
+        await this.firestore.updateDocument('countryConfigs', currentCountryId, countryConfig);
         this.toast.success('Country schema updated successfully.');
-        this.selectedCountry.set(config); // Update selectedCountry with latest data
+        this.selectedCountry.set(countryConfig); // Update selectedCountry with latest data
       } else {
-        const result = await this.firestore.addDocument('countryConfigs', config);
+        const result = await this.firestore.addDocument('countryConfigs', countryConfig);
         this.toast.success('Country schema created successfully.');
         this.router.navigate(['/manage-country', result.id]); // Navigate to edit mode
       }
@@ -208,15 +208,15 @@ export class CountryWizardComponent {
     }
   }
 
-  getFlagUrl(code: string | null | undefined) {
-    if (!code) return '';
-    const country = GLOBAL_COUNTRIES.find(c => c.code === code || c.iso2 === code);
-    const iso2 = country?.iso2 || code;
-    return `https://flagcdn.com/w40/${iso2.toLowerCase()}.png`;
+  getFlagUrl(countryCode: string | null | undefined) {
+    if (!countryCode) return '';
+    const countryItem = GLOBAL_COUNTRIES.find(country => country.code === countryCode || country.iso2 === countryCode);
+    const isoCode = countryItem?.iso2 || countryCode;
+    return `https://flagcdn.com/w40/${isoCode.toLowerCase()}.png`;
   }
 
-  getCountryByCode(code: string | null | undefined) {
-    if (!code) return undefined;
-    return GLOBAL_COUNTRIES.find(c => c.code === code);
+  getCountryByCode(countryCode: string | null | undefined) {
+    if (!countryCode) return undefined;
+    return GLOBAL_COUNTRIES.find(countryItem => countryItem.code === countryCode);
   }
 }

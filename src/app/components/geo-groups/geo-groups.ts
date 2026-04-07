@@ -20,7 +20,7 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class GeoGroupsComponent {
-  private fb = inject(FormBuilder);
+  private formBuilder = inject(FormBuilder);
   private firestore = inject(FirestoreService);
   private modal = inject(ModalService);
   private toast = inject(ToastService);
@@ -38,20 +38,20 @@ export class GeoGroupsComponent {
   selectedEntities = signal<string[]>([]);
   
   countryName = computed(() => {
-    const code = this.countryCode();
-    return GLOBAL_COUNTRIES.find(c => c.code === code || c.iso2 === code)?.name || null;
+    const currentCountryCode = this.countryCode();
+    return GLOBAL_COUNTRIES.find(countryItem => countryItem.code === currentCountryCode || countryItem.iso2 === currentCountryCode)?.name || null;
   });
 
   geoGroups$: Observable<GeoGroup[]> = toObservable(this.countryCode).pipe(
-    switchMap(code => {
-      if (!code) return of([]);
+    switchMap(currentCountryCode => {
+      if (!currentCountryCode) return of([]);
       return this.firestore.getCollection<GeoGroup>('geoGroups').pipe(
-        map(groups => groups.filter(g => g.countryCode === code))
+        map(geoGroups => geoGroups.filter(geoGroup => geoGroup.countryCode === currentCountryCode))
       );
     })
   );
 
-  form = this.fb.group({
+  form = this.formBuilder.group({
     name: ['', Validators.required],
     type: ['country' as GeoType, Validators.required],
     tempState: [''],
@@ -65,11 +65,11 @@ export class GeoGroupsComponent {
   constructor() {
     // Load states when country or type changes
     effect(() => {
-      const name = this.countryName();
-      const type = this.typeSignal();
+      const currentCountryName = this.countryName();
+      const currentType = this.typeSignal();
       
-      if (name && (type === 'state' || type === 'city')) {
-        untracked(() => this.loadStates(name));
+      if (currentCountryName && (currentType === 'state' || currentType === 'city')) {
+        untracked(() => this.loadStates(currentCountryName));
       } else {
         this.states.set([]);
       }
@@ -77,40 +77,40 @@ export class GeoGroupsComponent {
 
     // Load cities when state selection changes
     effect(() => {
-      const name = this.countryName();
-      const type = this.typeSignal();
-      const state = this.stateSignal();
+      const currentCountryName = this.countryName();
+      const currentType = this.typeSignal();
+      const currentState = this.stateSignal();
 
-      if (name && type === 'city' && state) {
-        untracked(() => this.loadCities(name, state));
+      if (currentCountryName && currentType === 'city' && currentState) {
+        untracked(() => this.loadCities(currentCountryName, currentState));
       } else {
         this.cities.set([]);
       }
     });
   }
 
-  loadStates(name: string) {
+  loadStates(currentCountryName: string) {
     this.isLoadingLocations.set(true);
-    this.locationService.getStates(name).pipe(
-      catchError(err => {
-        console.error('LocationService Error (States):', err);
+    this.locationService.getStates(currentCountryName).pipe(
+      catchError(error => {
+        console.error('LocationService Error (States):', error);
         return of([]);
       })
-    ).subscribe(data => {
-      this.states.set(data);
+    ).subscribe(statesData => {
+      this.states.set(statesData);
       this.isLoadingLocations.set(false);
     });
   }
 
-  loadCities(country: string, state: string) {
+  loadCities(countryName: string, stateName: string) {
     this.isLoadingLocations.set(true);
-    this.locationService.getCities(country, state).pipe(
-      catchError(err => {
-        console.error('LocationService Error (Cities):', err);
+    this.locationService.getCities(countryName, stateName).pipe(
+      catchError(error => {
+        console.error('LocationService Error (Cities):', error);
         return of([]);
       })
-    ).subscribe(data => {
-      this.cities.set(data);
+    ).subscribe(citiesData => {
+      this.cities.set(citiesData);
       this.isLoadingLocations.set(false);
     });
   }
@@ -123,12 +123,12 @@ export class GeoGroupsComponent {
     if (type === 'city') value = this.form.controls.tempCity.value || '';
 
     if (value && !this.selectedEntities().includes(value)) {
-      this.selectedEntities.update(current => [...current, value]);
+      this.selectedEntities.update(currentEntities => [...currentEntities, value]);
     }
   }
 
   removeEntity(entity: string) {
-    this.selectedEntities.update(current => current.filter(e => e !== entity));
+    this.selectedEntities.update(currentEntities => currentEntities.filter(currentEntity => currentEntity !== entity));
   }
 
   openAddModal() {
@@ -141,15 +141,15 @@ export class GeoGroupsComponent {
     });
   }
 
-  openEditModal(group: GeoGroup) {
-    this.editingGroupId.set(group.id!);
+  openEditModal(geoGroup: GeoGroup) {
+    this.editingGroupId.set(geoGroup.id!);
     this.form.reset({
-      name: group.name,
-      type: group.type,
+      name: geoGroup.name,
+      type: geoGroup.type,
       tempState: '',
       tempCity: ''
     });
-    this.selectedEntities.set([...group.entities]);
+    this.selectedEntities.set([...geoGroup.entities]);
     this.modal.open({
       title: 'Edit geographic group',
       template: this.formModalTemplate
@@ -186,27 +186,27 @@ export class GeoGroupsComponent {
     }
   }
 
-  requestDelete(id: string) {
+  requestDelete(geoGroupId: string) {
     this.modal.confirm({
       title: 'Archive group',
       message: 'Removing this geographic group may affect active contribution rules targeting these regions.',
       confirmBtnClass: 'btn-danger',
-      onConfirm: () => this.confirmDelete(id)
+      onConfirm: () => this.confirmDelete(geoGroupId)
     });
   }
 
-  async confirmDelete(id: string) {
-    await this.firestore.deleteDocument('geoGroups', id);
+  async confirmDelete(geoGroupId: string) {
+    await this.firestore.deleteDocument('geoGroups', geoGroupId);
   }
 
   closeModal() {
     this.modal.close();
   }
 
-  getFlagUrl(code: string | null | undefined) {
-    if (!code) return '';
-    const country = GLOBAL_COUNTRIES.find(c => c.code === code || c.iso2 === code);
-    const iso2 = country?.iso2 || code;
-    return `https://flagcdn.com/w40/${iso2.toLowerCase()}.png`;
+  getFlagUrl(countryCode: string | null | undefined) {
+    if (!countryCode) return '';
+    const countryItem = GLOBAL_COUNTRIES.find(country => country.code === countryCode || country.iso2 === countryCode);
+    const isoCode = countryItem?.iso2 || countryCode;
+    return `https://flagcdn.com/w40/${isoCode.toLowerCase()}.png`;
   }
 }

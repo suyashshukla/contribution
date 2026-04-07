@@ -22,34 +22,34 @@ export class FirestoreService {
   private loading = inject(LoadingService);
 
   getCollection<T>(collectionName: string): Observable<T[]> {
-    const colRef = collection(this.firestore, collectionName);
+    const collectionReference = collection(this.firestore, collectionName);
     return new Observable<T[]>(subscriber => {
-      let isFirstEmit = true;
+      let isFirstEmission = true;
       this.loading.show();
       
-      const unsubscribe = onSnapshot(colRef, 
+      const unsubscribe = onSnapshot(collectionReference, 
         snapshot => {
-          const data = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
+          const data = snapshot.docs.map(documentSnapshot => ({
+            id: documentSnapshot.id,
+            ...documentSnapshot.data()
           } as T));
           
-          if (isFirstEmit) {
+          if (isFirstEmission) {
             this.loading.hide();
-            isFirstEmit = false;
+            isFirstEmission = false;
           }
           subscriber.next(data);
         },
         error => {
-          if (isFirstEmit) {
+          if (isFirstEmission) {
             this.loading.hide();
-            isFirstEmit = false;
+            isFirstEmission = false;
           }
           subscriber.error(error);
         }
       );
       return () => {
-        if (isFirstEmit) {
+        if (isFirstEmission) {
           this.loading.hide();
         }
         unsubscribe();
@@ -58,36 +58,36 @@ export class FirestoreService {
   }
 
   getCollectionByFilter<T>(collectionName: string, field: string, value: any): Observable<T[]> {
-    const colRef = collection(this.firestore, collectionName);
-    const q = query(colRef, where(field, '==', value));
+    const collectionReference = collection(this.firestore, collectionName);
+    const firestoreQuery = query(collectionReference, where(field, '==', value));
     
     return new Observable<T[]>(subscriber => {
-      let isFirstEmit = true;
+      let isFirstEmission = true;
       this.loading.show();
 
-      const unsubscribe = onSnapshot(q, 
+      const unsubscribe = onSnapshot(firestoreQuery, 
         snapshot => {
-          const data = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
+          const data = snapshot.docs.map(documentSnapshot => ({
+            id: documentSnapshot.id,
+            ...documentSnapshot.data()
           } as T));
 
-          if (isFirstEmit) {
+          if (isFirstEmission) {
             this.loading.hide();
-            isFirstEmit = false;
+            isFirstEmission = false;
           }
           subscriber.next(data);
         },
         error => {
-          if (isFirstEmit) {
+          if (isFirstEmission) {
             this.loading.hide();
-            isFirstEmit = false;
+            isFirstEmission = false;
           }
           subscriber.error(error);
         }
       );
       return () => {
-        if (isFirstEmit) {
+        if (isFirstEmission) {
           this.loading.hide();
         }
         unsubscribe();
@@ -95,17 +95,17 @@ export class FirestoreService {
     });
   }
 
-  getDocument<T>(collectionName: string, id: string): Observable<T | null> {
-    const docRef = doc(this.firestore, `${collectionName}/${id}`);
+  getDocument<T>(collectionName: string, documentId: string): Observable<T | null> {
+    const documentReference = doc(this.firestore, `${collectionName}/${documentId}`);
     return new Observable<T | null>(subscriber => {
-      let isFirstEmit = true;
+      let isFirstEmission = true;
       this.loading.show();
 
-      const unsubscribe = onSnapshot(docRef,
+      const unsubscribe = onSnapshot(documentReference,
         snapshot => {
-          if (isFirstEmit) {
+          if (isFirstEmission) {
             this.loading.hide();
-            isFirstEmit = false;
+            isFirstEmission = false;
           }
           if (snapshot.exists()) {
             subscriber.next({ id: snapshot.id, ...snapshot.data() } as T);
@@ -114,15 +114,15 @@ export class FirestoreService {
           }
         },
         error => {
-          if (isFirstEmit) {
+          if (isFirstEmission) {
             this.loading.hide();
-            isFirstEmit = false;
+            isFirstEmission = false;
           }
           subscriber.error(error);
         }
       );
       return () => {
-        if (isFirstEmit) {
+        if (isFirstEmission) {
           this.loading.hide();
         }
         unsubscribe();
@@ -130,32 +130,32 @@ export class FirestoreService {
     });
   }
 
-  async addDocument(collectionName: string, data: any): Promise<DocumentReference> {
+  async addDocument(collectionName: string, documentData: any): Promise<DocumentReference> {
     this.loading.show();
     try {
-      const colRef = collection(this.firestore, collectionName);
-      const result = await addDoc(colRef, data);
+      const collectionReference = collection(this.firestore, collectionName);
+      const result = await addDoc(collectionReference, documentData);
       return result;
     } finally {
       this.loading.hide();
     }
   }
 
-  async updateDocument(collectionName: string, id: string, data: any): Promise<void> {
+  async updateDocument(collectionName: string, documentId: string, documentData: any): Promise<void> {
     this.loading.show();
     try {
-      const docRef = doc(this.firestore, `${collectionName}/${id}`);
-      await updateDoc(docRef, data);
+      const documentReference = doc(this.firestore, `${collectionName}/${documentId}`);
+      await updateDoc(documentReference, documentData);
     } finally {
       this.loading.hide();
     }
   }
 
-  async deleteDocument(collectionName: string, id: string): Promise<void> {
+  async deleteDocument(collectionName: string, documentId: string): Promise<void> {
     this.loading.show();
     try {
-      const docRef = doc(this.firestore, `${collectionName}/${id}`);
-      await deleteDoc(docRef);
+      const documentReference = doc(this.firestore, `${collectionName}/${documentId}`);
+      await deleteDoc(documentReference);
     } finally {
       this.loading.hide();
     }

@@ -21,10 +21,10 @@ export class CountrySetupComponent {
   countries$ = this.firestore.getCollection<CountryConfig>('countryConfigs');
   globalCountries = GLOBAL_COUNTRIES;
 
-  getFlagUrl(code: string | null | undefined) {
-    if (!code) return '';
-    const country = this.globalCountries.find(c => c.code === code || c.iso2 === code);
-    const iso2 = country?.iso2 || code;
-    return `https://flagcdn.com/w40/${iso2.toLowerCase()}.png`;
+  getFlagUrl(countryCode: string | null | undefined) {
+    if (!countryCode) return '';
+    const countryItem = this.globalCountries.find(country => country.code === countryCode || country.iso2 === countryCode);
+    const isoCode = countryItem?.iso2 || countryCode;
+    return `https://flagcdn.com/w40/${isoCode.toLowerCase()}.png`;
   }
 }

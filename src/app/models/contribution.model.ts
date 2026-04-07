@@ -1,16 +1,21 @@
+export enum ContributionType {
+  Employer = 'Employer',
+  Employee = 'Employee'
+}
+
 export interface Slab {
-  min: number;
-  max: number;
+  minimum: number;
+  maximum: number;
   valueSourceFieldId: string;
-  calcType: 'Fixed' | 'Percentage';
-  val: number;
+  calculationType: 'Fixed' | 'Percentage';
+  value: number;
   ceiling: number;
   wageTypeFieldId: string;
 }
 
 export interface Rule {
   name: string;
-  type: 'Employer' | 'Employee';
+  type: ContributionType;
   effectiveFrom: any; // Using any for simplicity in date handling from Firestore
   geoGroupId: string;
   slabs: Slab[];

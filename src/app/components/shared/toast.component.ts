@@ -167,18 +167,18 @@ import { Toast } from '../../models/toast.model';
 })
 export class ToastComponent {
   toast = input.required<Toast>();
-  onDismiss = input<(id: string) => void>();
+  onDismiss = input<(toastId: string) => void>();
   
   isExiting = signal(false);
 
   constructor() {
     // Auto-dismiss after duration
     effect(() => {
-      const t = this.toast();
-      if (t.duration > 0) {
+      const currentToast = this.toast();
+      if (currentToast.duration > 0) {
         setTimeout(() => {
           this.onClose();
-        }, t.duration);
+        }, currentToast.duration);
       }
     });
   }
@@ -187,9 +187,9 @@ export class ToastComponent {
     this.isExiting.set(true);
     // Wait for animation to complete
     setTimeout(() => {
-      const dismissFn = this.onDismiss();
-      if (dismissFn) {
-        dismissFn(this.toast().id);
+      const dismissFunction = this.onDismiss();
+      if (dismissFunction) {
+        dismissFunction(this.toast().id);
       }
     }, 200);
   }

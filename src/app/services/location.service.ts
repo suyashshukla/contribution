@@ -6,21 +6,21 @@ import { Observable, map } from 'rxjs';
   providedIn: 'root'
 })
 export class LocationService {
-  private http = inject(HttpClient);
+  private httpClient = inject(HttpClient);
   private baseUrl = 'https://countriesnow.space/api/v0.1';
 
   getStates(countryName: string): Observable<string[]> {
-    return this.http.post<any>(`${this.baseUrl}/countries/states`, { country: countryName }).pipe(
-      map(res => res.data.states.map((s: any) => s.name))
+    return this.httpClient.post<any>(`${this.baseUrl}/countries/states`, { country: countryName }).pipe(
+      map(response => response.data.states.map((state: any) => state.name))
     );
   }
 
   getCities(countryName: string, stateName: string): Observable<string[]> {
-    return this.http.post<any>(`${this.baseUrl}/countries/state/cities`, { 
+    return this.httpClient.post<any>(`${this.baseUrl}/countries/state/cities`, { 
       country: countryName, 
       state: stateName 
     }).pipe(
-      map(res => res.data)
+      map(response => response.data)
     );
   }
 }

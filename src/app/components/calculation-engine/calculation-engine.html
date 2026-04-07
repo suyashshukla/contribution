@@ -21,19 +21,25 @@
           placeholder="Search country schema"
           (change)="onCountryChange($event)"
           appendTo="body">
-          <ng-template ng-option-tmp let-item="item">
+          <ng-template ng-option-tmp let-country="item">
             <div class="country-select-option">
-              <img [src]="getFlagUrl(item.countryCode)" class="flag-icon" alt="{{ item.countryName }} flag">
-              <span>{{ item.countryName }}</span>
+              <img [src]="getFlagUrl(country.countryCode)" class="flag-icon" alt="{{ country.countryName }} flag">
+              <span>{{ country.countryName }}</span>
             </div>
           </ng-template>
-          <ng-template ng-label-tmp let-item="item">
+          <ng-template ng-label-tmp let-country="item">
             <div class="country-select-option">
-              <img [src]="getFlagUrl(item.countryCode)" class="flag-icon" alt="{{ item.countryName }} flag">
-              <span>{{ item.countryName }}</span>
+              <img [src]="getFlagUrl(country.countryCode)" class="flag-icon" alt="{{ country.countryName }} flag">
+              <span>{{ country.countryName }}</span>
             </div>
           </ng-template>
         </ng-select>
+      </div>
+
+      <div class="form-group">
+        <label for="runDate" class="label">Simulation Run Date</label>
+        <input id="runDate" type="date" [value]="runDate()" (input)="onRunDateChange($event)" class="input">
+        <p class="help-text">Used to identify effective contribution rules.</p>
       </div>
 
       @if (selectedCountry()) {
@@ -83,21 +89,24 @@
         
         <div class="results-table">
           <div class="table-header">
-            <div class="table-col">Rule Name</div>
+            <div class="table-col">Contribution</div>
             <div class="table-col">Type</div>
             <div class="table-col text-align-right">Calculated Amount</div>
           </div>
           
           <div class="table-body">
-            @for (res of results(); track res.ruleName) {
+            @for (result of results(); track result.ruleName) {
               <div class="table-row">
-                <div class="table-col font-weight-semibold">{{ res.ruleName }}</div>
                 <div class="table-col">
-                  <span class="badge" [class.badge-employer]="res.type === 'Employer'" [class.badge-employee]="res.type === 'Employee'">
-                    {{ res.type }}
+                  <div class="font-weight-semibold">{{ result.contributionName }}</div>
+                  <div class="text-xs text-muted">{{ result.ruleName }}</div>
+                </div>
+                <div class="table-col">
+                  <span class="badge" [class.badge-employer]="result.type === ContributionType.Employer" [class.badge-employee]="result.type === ContributionType.Employee">
+                    {{ result.type }}
                   </span>
                 </div>
-                <div class="table-col text-align-right font-mono font-weight-semibold">{{ res.amount | currency }}</div>
+                <div class="table-col text-align-right font-mono font-weight-semibold">{{ result.amount | currency }}</div>
               </div>
             } @empty {
               <div class="empty-results">
