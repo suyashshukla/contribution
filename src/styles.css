@@ -308,6 +308,56 @@ label {
 .mb-lg { margin-bottom: var(--space-lg); }
 .flex-grow { flex-grow: 1; }
 
+.hide-mobile {
+  display: block;
+}
+
+.show-mobile {
+  display: none;
+}
+
+/* Global Responsive Utilities */
+@media (max-width: 768px) {
+  .hide-mobile {
+    display: none !important;
+  }
+
+  .show-mobile {
+    display: block !important;
+  }
+
+  .modal-footer {
+    flex-direction: column-reverse;
+    gap: var(--space-sm);
+  }
+
+  .modal-footer .btn {
+    width: 100%;
+  }
+
+  /* Prevent elements from touching viewport edges */
+  .card {
+    margin-left: var(--space-md);
+    margin-right: var(--space-md);
+    padding: var(--space-lg);
+  }
+
+  .page-header {
+    padding-left: var(--space-md);
+    padding-right: var(--space-md);
+  }
+
+  /* Responsive Typography */
+  h1 { font-size: var(--font-size-2xl); }
+  h2 { font-size: var(--font-size-xl); }
+  h3 { font-size: var(--font-size-lg); }
+  
+  .page-title {
+    font-size: var(--font-size-2xl);
+    word-break: break-word;
+  }
+}
+
 /* Card Component */
 .card {
   background-color: white;

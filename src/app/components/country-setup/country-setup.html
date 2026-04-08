@@ -20,7 +20,7 @@
       <div class="country-selector-wrapper">
         <label class="label mb-xs">Initialize New Jurisdiction</label>
         <ng-select 
-          [items]="globalCountries" 
+          [items]="availableCountries$ | async" 
           bindLabel="name"
           placeholder="Search country..."
           (change)="onCountrySelect($event)"

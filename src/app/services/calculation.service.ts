@@ -24,69 +24,69 @@ export class CalculationService {
     const results: CalculationResult[] = [];
 
     contributions.forEach(contribution => {
-      // Filter rules by runDate and geographic applicability
-      const employerRule = this.getEffectiveRule(contribution.rules, ContributionType.Employer, runDate, selectedGeoGroupId, geoGroups, inputs);
-      if (employerRule) {
-        const amount = this.processRule(employerRule, inputs);
+      // Get all effective rules (one per unique Name + Type combination)
+      const effectiveRules = this.getEffectiveRules(contribution.rules, runDate, selectedGeoGroupId, geoGroups, inputs);
+      
+      effectiveRules.forEach(rule => {
+        const amount = this.processRule(rule, inputs);
         if (amount !== null) {
           results.push({
             contributionName: contribution.name,
-            ruleName: employerRule.name,
-            type: ContributionType.Employer,
+            ruleName: rule.name,
+            type: rule.type,
             amount: amount
           });
         }
-      }
-
-      const employeeRule = this.getEffectiveRule(contribution.rules, ContributionType.Employee, runDate, selectedGeoGroupId, geoGroups, inputs);
-      if (employeeRule) {
-        const amount = this.processRule(employeeRule, inputs);
-        if (amount !== null) {
-          results.push({
-            contributionName: contribution.name,
-            ruleName: employeeRule.name,
-            type: ContributionType.Employee,
-            amount: amount
-          });
-        }
-      }
+      });
     });
 
     return results;
   }
 
-  private getEffectiveRule(
-    rules: Rule[], 
-    type: ContributionType, 
+  /**
+   * Filters and picks the most recent effective version of every uniquely named rule strategy.
+   */
+  private getEffectiveRules(
+    allRules: Rule[], 
     runDate: string, 
     selectedGeoGroupId: string | null,
     geoGroups: GeoGroup[],
     inputs: Record<string, any>
-  ): Rule | null {
-    const applicableRules = rules
-      .filter(rule => {
-        // 1. Basic Type and Date filter
-        if (rule.type !== type || rule.effectiveFrom > runDate) return false;
+  ): Rule[] {
+    // 1. Filter by date and explicit geo selection
+    const applicableRules = allRules.filter(rule => {
+      // Basic date check
+      if (rule.effectiveFrom > runDate) return false;
 
-        // 2. Explicit selection filter (if user picked a group in simulation dropdown)
-        if (selectedGeoGroupId && rule.geoGroupId !== selectedGeoGroupId) return false;
+      // Explicit selection filter (if user picked a group in simulation dropdown)
+      if (selectedGeoGroupId && rule.geoGroupId !== selectedGeoGroupId) return false;
 
-        // 3. Dynamic input matching (if no group selected, or to verify selected group matches inputs)
-        const geoGroup = geoGroups.find(groupItem => groupItem.id === rule.geoGroupId);
-        if (geoGroup && !this.isLocationMatching(geoGroup, inputs)) return false;
+      // Dynamic input matching (check if inputs match the rule's target region)
+      const geoGroup = geoGroups.find(groupItem => groupItem.id === rule.geoGroupId);
+      if (geoGroup && !this.isLocationMatching(geoGroup, inputs)) return false;
 
-        return true;
-      })
-      .sort((ruleA, ruleB) => ruleB.effectiveFrom.localeCompare(ruleA.effectiveFrom));
+      return true;
+    });
 
-    return applicableRules.length > 0 ? applicableRules[0] : null;
+    // 2. Group by Name + Type and pick the latest effective version for each
+    const ruleMap = new Map<string, Rule>();
+
+    applicableRules.forEach(rule => {
+      const key = `${rule.name.toLowerCase()}_${rule.type}`;
+      const existing = ruleMap.get(key);
+
+      if (!existing || rule.effectiveFrom > existing.effectiveFrom) {
+        ruleMap.set(key, rule);
+      }
+    });
+
+    return Array.from(ruleMap.values());
   }
 
   private isLocationMatching(group: GeoGroup, inputs: Record<string, any>): boolean {
     let inputLocationValue = '';
     
     // Attempt to find relevant input based on group type
-    // We assume field IDs might contain keywords like 'country', 'state', 'city'
     if (group.type === 'country') {
       const countryKey = Object.keys(inputs).find(key => key.toLowerCase().includes('country'));
       inputLocationValue = countryKey ? inputs[countryKey] : '';
@@ -98,7 +98,7 @@ export class CalculationService {
       inputLocationValue = cityKey ? inputs[cityKey] : '';
     }
 
-    if (!inputLocationValue) return true; // If no specific input found, assume match to avoid over-filtering
+    if (!inputLocationValue) return true; // Assume match if field not provided to avoid hiding valid rules
 
     const isIncluded = group.entities.includes(inputLocationValue);
     

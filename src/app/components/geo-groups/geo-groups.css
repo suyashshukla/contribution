@@ -43,18 +43,18 @@
   padding: 0;
   border-radius: var(--radius-full);
 }
-
 .geo-groups-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: var(--space-lg);
+  align-items: start;
 }
 
 .geo-group-card {
-  padding: var(--space-xl);
+  padding: var(--space-lg);
   display: flex;
   flex-direction: column;
-  gap: var(--space-lg);
+  gap: var(--space-md);
   transition: var(--transition-ease);
 }
 
@@ -66,9 +66,7 @@
 .geo-group-card-header {
   display: flex;
   flex-direction: column;
-  gap: var(--space-sm);
-  padding-bottom: var(--space-md);
-  border-bottom: 1px solid var(--border-color);
+  gap: var(--space-xs);
 }
 
 .geo-group-flag-type {
@@ -92,7 +90,7 @@
 }
 
 .geo-group-card-body {
-  flex-grow: 1;
+  margin: 0;
 }
 
 .entity-pills {
@@ -113,8 +111,6 @@
   display: flex;
   justify-content: flex-end;
   gap: var(--space-md);
-  padding-top: var(--space-md);
-  border-top: 1px solid var(--border-color);
 }
 
 .empty-state {
@@ -277,16 +273,35 @@
   height: 14px;
 }
 
+.pill-danger {
+  background-color: var(--color-danger);
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
+  .geo-groups-page {
+    padding: var(--space-md);
+  }
+
   .page-header {
     flex-direction: column;
     align-items: flex-start;
     gap: var(--space-md);
+    margin-bottom: var(--space-xl);
   }
 
   .geo-groups-grid {
     grid-template-columns: 1fr;
+    gap: var(--space-md);
+  }
+
+  .geo-group-card {
+    padding: var(--space-md);
+    margin: 0 var(--space-md);
+  }
+
+  .empty-state {
+    margin: 0 var(--space-md);
   }
 
   .radio-group {
@@ -297,5 +312,9 @@
   .form-grid-col-auto {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .nested-card {
+    padding: var(--space-md);
   }
 }

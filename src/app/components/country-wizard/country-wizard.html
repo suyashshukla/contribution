@@ -58,6 +58,7 @@
                   (change)="onCountrySelect($event)"
                   formControlName="countryCode"
                   [clearable]="false"
+                  [readonly]="countryId() !== 'new'"
                   appendTo="body">
                   <ng-template ng-option-tmp let-item="item">
                     <div class="country-select-option">

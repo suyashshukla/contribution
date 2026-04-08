@@ -17,7 +17,6 @@
           id="countrySelect"
           [items]="countries$ | async" 
           bindLabel="countryName" 
-          bindValue="id"
           placeholder="Search country schema"
           (change)="onCountryChange($event)"
           appendTo="body">
@@ -90,11 +89,11 @@
       <div class="results-summary">
         <div class="summary-card">
           <p class="summary-label">Employer Total</p>
-          <strong class="summary-value">{{ employerTotal() | currency }}</strong>
+          <strong class="summary-value">{{ selectedCurrencyCode() || '' }} {{ employerTotal() | number:'1.2-2' }}</strong>
         </div>
         <div class="summary-card">
           <p class="summary-label">Employee Total</p>
-          <strong class="summary-value">{{ employeeTotal() | currency }}</strong>
+          <strong class="summary-value">{{ selectedCurrencyCode() || '' }} {{ employeeTotal() | number:'1.2-2' }}</strong>
         </div>
       </div>
 
@@ -111,16 +110,20 @@
           <div class="table-body">
             @for (result of results(); track result.ruleName) {
               <div class="table-row">
-                <div class="table-col">
-                  <div class="font-weight-semibold">{{ result.contributionName }}</div>
-                  <div class="text-xs text-muted">{{ result.ruleName }}</div>
+                <div class="table-col" data-label="Contribution">
+                  <div>
+                    <div class="font-weight-semibold">{{ result.contributionName }}</div>
+                    <div class="text-xs text-muted">{{ result.ruleName }}</div>
+                  </div>
                 </div>
-                <div class="table-col">
+                <div class="table-col" data-label="Type">
                   <span class="badge" [class.badge-employer]="result.type === ContributionType.Employer" [class.badge-employee]="result.type === ContributionType.Employee">
                     {{ result.type }}
                   </span>
                 </div>
-                <div class="table-col text-align-right font-mono font-weight-semibold">{{ result.amount | currency }}</div>
+                <div class="table-col text-align-right font-mono font-weight-semibold" data-label="Amount">
+                  {{ selectedCurrencyCode() || '' }} {{ result.amount | number:'1.2-2' }}
+                </div>
               </div>
             } @empty {
               <div class="empty-results">

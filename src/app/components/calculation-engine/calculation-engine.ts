@@ -34,6 +34,13 @@ export class CalculationEngineComponent {
   runDate = signal<string>(new Date().toISOString().split('T')[0]);
   dynamicForm: FormGroup = this.formBuilder.group({});
 
+  selectedCurrencyCode = computed(() => {
+    const countryConfig = this.selectedCountry();
+    if (!countryConfig) return undefined;
+    const countryData = this.globalCountries.find(countryItem => countryItem.code === countryConfig.countryCode);
+    return countryData?.currency;
+  });
+
   geoGroups$ = toObservable(this.selectedCountry).pipe(
     switchMap(countryConfig => {
       if (!countryConfig) return of([]);

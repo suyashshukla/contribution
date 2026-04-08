@@ -92,6 +92,35 @@ import { CommonModule } from '@angular/common';
       animation: slide-left-in 0.28s cubic-bezier(0.2, 1, 0.4, 1);
     }
 
+    @media (max-width: 768px) {
+      .modal-window {
+        width: 95vw !important;
+        max-height: 95vh;
+        border-radius: var(--radius-lg);
+      }
+
+      .modal-centered {
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+      }
+
+      .modal-side-right, .modal-side-left {
+        width: 100vw !important;
+        height: 100vh;
+        max-height: 100vh;
+        border-radius: 0;
+      }
+
+      .modal-header {
+        padding: var(--space-md);
+      }
+
+      .modal-body {
+        padding: var(--space-md);
+      }
+    }
+
     .modal-header {
       display: flex;
       align-items: center;
