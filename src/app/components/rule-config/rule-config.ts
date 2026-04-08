@@ -13,6 +13,7 @@ import { FormBuilder, FormArray, ReactiveFormsModule, Validators, FormGroup } fr
 import { FirestoreService } from '../../services/firestore.service';
 import { ModalService } from '../../services/modal.service';
 import { ToastService } from '../../services/toast.service';
+import { ImportService } from '../../services/import.service';
 import { CountryConfig } from '../../models/country-config.model';
 import { GeoGroup } from '../../models/geo-group.model';
 import {
@@ -48,6 +49,7 @@ import { IconPlusComponent, IconDownloadComponent, IconUploadComponent } from '.
 export class RuleConfigComponent {
   private formBuilder = inject(FormBuilder);
   private firestore = inject(FirestoreService);
+  private importService = inject(ImportService);
   protected modal = inject(ModalService);
   private toast = inject(ToastService);
 
@@ -128,25 +130,22 @@ export class RuleConfigComponent {
 
   async onFileSelected(event: any) {
     const file = event.target.files[0];
-    if (!file) return;
+    const currentCountryCode = this.countryCode();
+    
+    if (!file || !currentCountryCode) return;
 
     try {
       this.isImporting.set(true);
-      const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data);
-      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet);
-
-      if (jsonData.length === 0) {
-        this.toast.error('The selected Excel file is empty.');
-        return;
+      const result = await this.importService.importRulesFromExcel(file, currentCountryCode);
+      
+      if (result.success) {
+        this.toast.success(result.message);
+      } else {
+        this.toast.error(result.message);
       }
-
-      await this.processImportedData(jsonData);
-      this.toast.success('Rules imported and synchronized successfully.');
     } catch (error: any) {
-      console.error('Excel Import Error:', error);
-      this.toast.error('Failed to import Excel file. Ensure it follows the correct schema.');
+      console.error('Excel Import UI Error:', error);
+      this.toast.error('An unexpected error occurred during import.');
     } finally {
       this.isImporting.set(false);
       event.target.value = ''; // Reset file input
@@ -175,7 +174,7 @@ export class RuleConfigComponent {
             rows.push({
               'Contribution Set': contribution.name,
               'Rule Name': rule.name,
-              Type: rule.type,
+              'Type': rule.type,
               'Effective From': rule.effectiveFrom,
               'Geographic Group': geoGroupName,
               'Tier Lower Limit': slab.tierLowerLimit,
@@ -199,7 +198,7 @@ export class RuleConfigComponent {
         rows.push({
           'Contribution Set': 'Sample Set',
           'Rule Name': 'Standard Rate',
-          Type: 'Employer',
+          'Type': 'Employer',
           'Effective From': new Date().toISOString().split('T')[0],
           'Geographic Group': geoGroups[0]?.name || 'All Regions',
           'Tier Lower Limit': 0,
@@ -223,116 +222,6 @@ export class RuleConfigComponent {
     } catch (error: any) {
       console.error('Download Template Error:', error);
       this.toast.error('Failed to generate Excel template.');
-    }
-  }
-
-  private async processImportedData(rows: any[]) {
-    const countryCode = this.countryCode()!;
-    const geoGroups = await firstValueFrom(this.geoGroups$);
-    const countryConfig = this.selectedCountry()!;
-    const existingContributions = await firstValueFrom(this.contributions$);
-
-    // Group rows by Contribution Set Name and then by Rule Name + Type + Date + Geo
-    const contributionGroups = new Map<string, any[]>();
-    rows.forEach((row) => {
-      const setName = row['Contribution Set'] || row['Set Name'] || 'Default Set';
-      if (!contributionGroups.has(setName)) contributionGroups.set(setName, []);
-      contributionGroups.get(setName)!.push(row);
-    });
-
-    for (const [setName, setRows] of contributionGroups.entries()) {
-      let contribution = existingContributions.find(
-        (contributionItem) => contributionItem.name === setName,
-      );
-      const updatedRules: Rule[] = contribution ? [...contribution.rules] : [];
-
-      // Group rows within this set by Rule uniqueness
-      const ruleGroups = new Map<string, any[]>();
-      setRows.forEach((row) => {
-        const ruleKey = `${row['Rule Name']}_${row['Type']}_${row['Effective From']}_${row['Geographic Group']}`;
-        if (!ruleGroups.has(ruleKey)) ruleGroups.set(ruleKey, []);
-        ruleGroups.get(ruleKey)!.push(row);
-      });
-
-      for (const [_, ruleRows] of ruleGroups.entries()) {
-        const firstRow = ruleRows[0];
-        const ruleName = firstRow['Rule Name'];
-        const type =
-          firstRow['Type'] === 'Employee' ? ContributionType.Employee : ContributionType.Employer;
-        const effectiveFrom = this.formatExcelDate(firstRow['Effective From']);
-
-        const geoGroupName = firstRow['Geographic Group'];
-        const geoGroupId = geoGroups.find((geoGroup) => geoGroup.name === geoGroupName)?.id || '';
-
-        const slabs: Slab[] = ruleRows.map((row) => ({
-          tierLowerLimit: Number(row['Tier Lower Limit'] || row['Min Threshold'] || 0),
-          tierUpperLimit: Number(row['Tier Upper Limit'] || row['Max Threshold'] || 999999999),
-          tierDeterminationFieldId:
-            countryConfig.fields.find(
-              (field) => field.name === (row['Tier Determination Field'] || row['Value Source']),
-            )?.id || '',
-          calculationType:
-            row['Calculation Type'] === CalculationType.Fixed
-              ? CalculationType.Fixed
-              : CalculationType.Percentage,
-          rateOrAmount: Number(row['Rate or Amount'] || row['Value'] || 0),
-          contributionCap: Number(
-            row['Contribution Cap'] || row['Max Amount'] || row['Ceiling'] || 0,
-          ),
-          calculationBasisFieldId:
-            countryConfig.fields.find(
-              (field) => field.name === (row['Calculation Basis Field'] || row['Wage Basis']),
-            )?.id || '',
-        }));
-
-        // Smart Logic: Find if rule already exists in this contribution
-        const existingRuleIndex = updatedRules.findIndex(
-          (rule) =>
-            rule.name === ruleName &&
-            rule.type === type &&
-            rule.effectiveFrom === effectiveFrom &&
-            rule.geoGroupId === geoGroupId,
-        );
-
-        const newRule: Rule = { name: ruleName, type, effectiveFrom, geoGroupId, slabs };
-
-        if (existingRuleIndex !== null && existingRuleIndex > -1) {
-          updatedRules[existingRuleIndex] = newRule;
-        } else {
-          updatedRules.push(newRule);
-        }
-      }
-
-      if (contribution) {
-        await this.firestore.updateDocument('contributions', contribution.id!, {
-          rules: updatedRules,
-        });
-      } else {
-        await this.firestore.addDocument('contributions', {
-          name: setName,
-          countryCode,
-          rules: updatedRules,
-        });
-      }
-    }
-  }
-
-  private formatExcelDate(excelDate: any): string {
-    if (!excelDate) return new Date().toISOString().split('T')[0];
-
-    // Handle Excel serial date if necessary
-    if (typeof excelDate === 'number') {
-      const date = new Date((excelDate - 25569) * 86400 * 1000);
-      return date.toISOString().split('T')[0];
-    }
-
-    // Handle string date
-    try {
-      const date = new Date(excelDate);
-      if (isNaN(date.getTime())) throw new Error();
-      return date.toISOString().split('T')[0];
-    } catch {
-      return excelDate.toString(); // Fallback to raw string if it looks like YYYY-MM-DD
     }
   }
 

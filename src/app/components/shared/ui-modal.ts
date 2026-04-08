@@ -10,8 +10,10 @@ import { CommonModule } from '@angular/common';
          [class.modal-size-sm]="size() === 'sm'"
          [class.modal-size-md]="size() === 'md'"
          [class.modal-size-lg]="size() === 'lg'"
+         [class.modal-size-xl]="size() === 'xl'"
          [class.modal-side-right]="side() === 'right'"
          [class.modal-side-left]="side() === 'left'"
+         [class.modal-centered]="!side()"
          role="dialog"
          aria-modal="true"
          [attr.aria-label]="title()">
@@ -53,16 +55,16 @@ import { CommonModule } from '@angular/common';
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      z-index: 10000; /* Higher than backdrop */
-      animation: scale-in 0.25s cubic-bezier(0.2, 1, 0.4, 1);
+      z-index: 10000;
       max-height: 90vh;
       max-width: 90vw;
     }
 
-    .modal-window:not(.modal-side-right):not(.modal-side-left) {
+    .modal-centered {
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
+      animation: scale-in 0.25s cubic-bezier(0.2, 1, 0.4, 1);
     }
 
     .modal-size-sm { width: 400px; }
