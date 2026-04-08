@@ -54,7 +54,7 @@
   padding: var(--space-lg);
   display: flex;
   flex-direction: column;
-  gap: var(--space-md);
+  gap: var(--space-xs);
   transition: var(--transition-ease);
 }
 
@@ -66,7 +66,8 @@
 .geo-group-card-header {
   display: flex;
   flex-direction: column;
-  gap: var(--space-xs);
+  gap: var(--space-xxs);
+  margin: 0;
 }
 
 .geo-group-flag-type {
@@ -87,10 +88,12 @@
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
   color: var(--text-heading);
+  margin: 0; /* Reset global H2 margin */
+  line-height: 1.2;
 }
 
 .geo-group-card-body {
-  margin: 0;
+  margin: var(--space-xs) 0;
 }
 
 .entity-pills {
