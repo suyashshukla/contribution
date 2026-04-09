@@ -422,3 +422,39 @@ export class IconUploadComponent {
   size = input<number>(20);
   class = input<string>('');
 }
+
+// Info Icon
+@Component({
+  selector: 'app-icon-info',
+  template: `
+    <svg 
+      [attr.width]="size()" 
+      [attr.height]="size()" 
+      viewBox="0 0 24 24"
+      fill="none" 
+      stroke="currentColor" 
+      stroke-width="2" 
+      stroke-linecap="round" 
+      stroke-linejoin="round"
+      [class]="class()">
+      <circle cx="12" cy="12" r="10"></circle>
+      <line x1="12" y1="16" x2="12" y2="12"></line>
+      <line x1="12" y1="8" x2="12.01" y2="8"></line>
+    </svg>
+  `,
+  styles: [`
+    :host {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    svg {
+      flex-shrink: 0;
+    }
+  `],
+  changeDetection: ChangeDetectionStrategy.OnPush
+})
+export class IconInfoComponent {
+  size = input<number>(20);
+  class = input<string>('');
+}

@@ -10,11 +10,12 @@ import { GLOBAL_COUNTRIES } from '../../models/countries.data';
 import { NgSelectModule } from '@ng-select/ng-select';
 import { take, combineLatest, map, of, switchMap } from 'rxjs';
 import { toObservable } from '@angular/core/rxjs-interop';
+import { IconInfoComponent, IconSearchComponent } from '../shared/icons';
 
 @Component({
   selector: 'app-calculation-engine',
 
-  imports: [CommonModule, ReactiveFormsModule, NgSelectModule],
+  imports: [CommonModule, ReactiveFormsModule, NgSelectModule, IconInfoComponent, IconSearchComponent],
   templateUrl: './calculation-engine.html',
   styleUrl: './calculation-engine.css',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -31,6 +32,7 @@ export class CalculationEngineComponent {
   selectedCountry = signal<CountryConfig | null>(null);
   selectedGeoGroupId = signal<string | null>(null);
   results = signal<CalculationResult[]>([]);
+  isSimulationRun = signal<boolean>(false);
   runDate = signal<string>(new Date().toISOString().split('T')[0]);
   dynamicForm: FormGroup = this.formBuilder.group({});
 
@@ -73,6 +75,7 @@ export class CalculationEngineComponent {
   }
 
   onCountryChange(countryConfig: CountryConfig | null) {
+    this.isSimulationRun.set(false);
     if (!countryConfig) {
       this.selectedCountry.set(null);
       this.selectedGeoGroupId.set(null);
@@ -110,6 +113,7 @@ export class CalculationEngineComponent {
   async calculate() {
     if (this.dynamicForm.invalid || !this.selectedCountry()) return;
 
+    this.isSimulationRun.set(true);
     const countryCode = this.selectedCountry()!.countryCode;
     const inputs = this.dynamicForm.getRawValue();
     const runDate = this.runDate();

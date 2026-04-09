@@ -127,7 +127,23 @@
               </div>
             } @empty {
               <div class="empty-results">
-                <p>Run a simulation to see the rule breakdown.</p>
+                @if (isSimulationRun()) {
+                  <div class="empty-state-content">
+                    <div class="empty-icon-wrapper warning">
+                      <app-icon-info [size]="48"></app-icon-info>
+                    </div>
+                    <h3>No applicable rules found</h3>
+                    <p>We couldn't identify any active contribution rules for the current configuration, date, and inputs. Please verify your settings and try again.</p>
+                  </div>
+                } @else {
+                  <div class="empty-state-content">
+                    <div class="empty-icon-wrapper info">
+                      <app-icon-search [size]="48"></app-icon-search>
+                    </div>
+                    <h3>Ready to calculate</h3>
+                    <p>Select a country and provide the necessary inputs to see the rule breakdown.</p>
+                  </div>
+                }
               </div>
             }
           </div>
