@@ -11,6 +11,18 @@
   border-bottom: 1px solid var(--border-color);
 }
 
+.header-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-sm);
+}
+
+.header-actions .btn {
+  width: 100%;
+  justify-content: flex-start;
+}
+
 .page-kicker {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);

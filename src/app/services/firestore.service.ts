@@ -9,9 +9,12 @@ import {
   query, 
   where,
   onSnapshot,
-  DocumentReference
+  DocumentReference,
+  collectionGroup,
+  getDocs
 } from '@angular/fire/firestore';
-import { Observable } from 'rxjs';
+import { Observable, from } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { LoadingService } from './loading.service';
 
 @Injectable({

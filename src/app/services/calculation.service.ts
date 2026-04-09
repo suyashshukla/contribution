@@ -119,7 +119,8 @@ export class CalculationService {
           amount = slab.rateOrAmount;
         }
 
-        if (slab.contributionCap > 0 && amount > slab.contributionCap) {
+        // Apply Contribution Cap if preferred
+        if (slab.hasContributionCap && slab.contributionCap > 0 && amount > slab.contributionCap) {
           amount = slab.contributionCap;
         }
 

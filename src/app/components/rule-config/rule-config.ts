@@ -3,17 +3,16 @@ import {
   ChangeDetectionStrategy,
   inject,
   input,
-  effect,
   signal,
   ViewChild,
   TemplateRef,
+  ChangeDetectorRef
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormArray, ReactiveFormsModule, Validators, FormGroup } from '@angular/forms';
 import { FirestoreService } from '../../services/firestore.service';
 import { ModalService } from '../../services/modal.service';
 import { ToastService } from '../../services/toast.service';
-import { ImportService } from '../../services/import.service';
 import { CountryConfig } from '../../models/country-config.model';
 import { GeoGroup } from '../../models/geo-group.model';
 import {
@@ -25,11 +24,9 @@ import {
 } from '../../models/contribution.model';
 import { GLOBAL_COUNTRIES } from '../../models/countries.data';
 import { NgSelectModule } from '@ng-select/ng-select';
-import { take, map, switchMap, of, firstValueFrom } from 'rxjs';
-import { toObservable } from '@angular/core/rxjs-interop';
-import * as XLSX from 'xlsx';
-
-import { IconPlusComponent, IconDownloadComponent, IconUploadComponent } from '../shared/icons';
+import { take, map, switchMap, of } from 'rxjs';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { IconPlusComponent } from '../shared/icons';
 
 @Component({
   selector: 'app-rule-config',
@@ -38,9 +35,7 @@ import { IconPlusComponent, IconDownloadComponent, IconUploadComponent } from '.
     CommonModule, 
     ReactiveFormsModule, 
     NgSelectModule, 
-    IconPlusComponent, 
-    IconDownloadComponent, 
-    IconUploadComponent
+    IconPlusComponent
   ],
   templateUrl: './rule-config.html',
   styleUrl: './rule-config.css',
@@ -48,10 +43,10 @@ import { IconPlusComponent, IconDownloadComponent, IconUploadComponent } from '.
 })
 export class RuleConfigComponent {
   private formBuilder = inject(FormBuilder);
-  private firestore = inject(FirestoreService);
-  private importService = inject(ImportService);
-  protected modal = inject(ModalService);
-  private toast = inject(ToastService);
+  private firestoreService = inject(FirestoreService);
+  private changeDetectorRef = inject(ChangeDetectorRef);
+  protected modalService = inject(ModalService);
+  private toastService = inject(ToastService);
 
   @ViewChild('setModal') setModalTemplate!: TemplateRef<any>;
   @ViewChild('manageRulesModal') manageRulesModalTemplate!: TemplateRef<any>;
@@ -59,9 +54,19 @@ export class RuleConfigComponent {
   ContributionType = ContributionType;
   CalculationType = CalculationType;
   countryCode = input<string | null | undefined>(null);
-  selectedCountry = signal<CountryConfig | null>(null);
   isSaving = signal(false);
-  isImporting = signal(false);
+
+  // Use toSignal with switchMap to ensure selectedCountry always reflects Firestore state (reactive sync)
+  selectedCountry = toSignal(
+    toObservable(this.countryCode).pipe(
+      switchMap(currentCountryCode => {
+        if (!currentCountryCode) return of(null);
+        return this.firestoreService.getCollectionByFilter<CountryConfig>('countryConfigs', 'countryCode', currentCountryCode).pipe(
+          map(configs => configs.length > 0 ? configs[0] : null)
+        );
+      })
+    )
+  );
 
   showConfirmDelete = signal<string | null>(null);
   activeContribution = signal<Contribution | null>(null);
@@ -71,7 +76,7 @@ export class RuleConfigComponent {
   geoGroups$ = toObservable(this.countryCode).pipe(
     switchMap((currentCountryCode) => {
       if (!currentCountryCode) return of([]);
-      return this.firestore
+      return this.firestoreService
         .getCollection<GeoGroup>('geoGroups')
         .pipe(
           map((geoGroups) =>
@@ -84,7 +89,7 @@ export class RuleConfigComponent {
   contributions$ = toObservable(this.countryCode).pipe(
     switchMap((currentCountryCode) => {
       if (!currentCountryCode) return of([]);
-      return this.firestore.getCollectionByFilter<Contribution>(
+      return this.firestoreService.getCollectionByFilter<Contribution>(
         'contributions',
         'countryCode',
         currentCountryCode,
@@ -104,125 +109,8 @@ export class RuleConfigComponent {
     slabs: this.formBuilder.array([]),
   });
 
-  constructor() {
-    effect(() => {
-      const currentCountryCode = this.countryCode();
-      if (currentCountryCode) {
-        this.loadCountrySchema(currentCountryCode);
-      }
-    });
-  }
-
-  loadCountrySchema(currentCountryCode: string) {
-    this.firestore
-      .getCollectionByFilter<CountryConfig>('countryConfigs', 'countryCode', currentCountryCode)
-      .pipe(take(1))
-      .subscribe((countryConfigs) => {
-        if (countryConfigs.length > 0) {
-          this.selectedCountry.set(countryConfigs[0]);
-        }
-      });
-  }
-
   get slabs() {
     return this.strategyForm.get('slabs') as FormArray;
-  }
-
-  async onFileSelected(event: any) {
-    const file = event.target.files[0];
-    const currentCountryCode = this.countryCode();
-    
-    if (!file || !currentCountryCode) return;
-
-    try {
-      this.isImporting.set(true);
-      const result = await this.importService.importRulesFromExcel(file, currentCountryCode);
-      
-      if (result.success) {
-        this.toast.success(result.message);
-      } else {
-        this.toast.error(result.message);
-      }
-    } catch (error: any) {
-      console.error('Excel Import UI Error:', error);
-      this.toast.error('An unexpected error occurred during import.');
-    } finally {
-      this.isImporting.set(false);
-      event.target.value = ''; // Reset file input
-    }
-  }
-
-  async downloadTemplate() {
-    try {
-      const contributions = await firstValueFrom(this.contributions$);
-      const geoGroups = await firstValueFrom(this.geoGroups$);
-      const countryConfig = this.selectedCountry();
-
-      if (!countryConfig) {
-        this.toast.error('Country configuration not loaded.');
-        return;
-      }
-
-      const rows: any[] = [];
-
-      contributions.forEach((contribution) => {
-        contribution.rules.forEach((rule) => {
-          const geoGroupName =
-            geoGroups.find((geoGroup) => geoGroup.id === rule.geoGroupId)?.name || '';
-
-          rule.slabs.forEach((slab) => {
-            rows.push({
-              'Contribution Set': contribution.name,
-              'Rule Name': rule.name,
-              'Type': rule.type,
-              'Effective From': rule.effectiveFrom,
-              'Geographic Group': geoGroupName,
-              'Tier Lower Limit': slab.tierLowerLimit,
-              'Tier Upper Limit': slab.tierUpperLimit,
-              'Tier Determination Field':
-                countryConfig.fields.find((field) => field.id === slab.tierDeterminationFieldId)
-                  ?.name || '',
-              'Calculation Type': slab.calculationType,
-              'Rate or Amount': slab.rateOrAmount,
-              'Contribution Cap': slab.contributionCap,
-              'Calculation Basis Field':
-                countryConfig.fields.find((field) => field.id === slab.calculationBasisFieldId)
-                  ?.name || '',
-            });
-          });
-        });
-      });
-
-      // If no data, add a sample row
-      if (rows.length === 0) {
-        rows.push({
-          'Contribution Set': 'Sample Set',
-          'Rule Name': 'Standard Rate',
-          'Type': 'Employer',
-          'Effective From': new Date().toISOString().split('T')[0],
-          'Geographic Group': geoGroups[0]?.name || 'All Regions',
-          'Tier Lower Limit': 0,
-          'Tier Upper Limit': 999999,
-          'Tier Determination Field': countryConfig.fields[0]?.name || '',
-          'Calculation Type': CalculationType.Percentage,
-          'Rate or Amount': 5,
-          'Contribution Cap': 0,
-          'Calculation Basis Field': countryConfig.fields[0]?.name || '',
-        });
-      }
-
-      const worksheet = XLSX.utils.json_to_sheet(rows);
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Contribution Rules');
-
-      const fileName = `Contribution_Template_${countryConfig.countryCode}_${new Date().toISOString().split('T')[0]}.xlsx`;
-      XLSX.writeFile(workbook, fileName);
-
-      this.toast.success('Template downloaded successfully.');
-    } catch (error: any) {
-      console.error('Download Template Error:', error);
-      this.toast.error('Failed to generate Excel template.');
-    }
   }
 
   addSlab(initialData?: any) {
@@ -235,6 +123,7 @@ export class RuleConfigComponent {
         Validators.required,
       ],
       rateOrAmount: [initialData?.rateOrAmount ?? 0, Validators.required],
+      hasContributionCap: [initialData?.hasContributionCap ?? false],
       contributionCap: [initialData?.contributionCap ?? 0],
       calculationBasisFieldId: [initialData?.calculationBasisFieldId ?? '', Validators.required],
     });
@@ -243,7 +132,7 @@ export class RuleConfigComponent {
 
   openCreateModal() {
     this.setForm.reset();
-    this.modal.open({
+    this.modalService.open({
       title: 'Define contribution set',
       size: 'sm',
       template: this.setModalTemplate,
@@ -258,14 +147,14 @@ export class RuleConfigComponent {
       const contribution: Partial<Contribution> = {
         name: this.setForm.get('name')?.value!,
         countryCode: this.countryCode()!,
-        rules: [],
+        rules: []
       };
-      await this.firestore.addDocument('contributions', contribution);
-      this.modal.close();
-      this.toast.success('Contribution set created successfully.');
+      await this.firestoreService.addDocument('contributions', contribution);
+      this.modalService.close();
+      this.toastService.success('Contribution set created successfully.');
     } catch (error: any) {
       console.error('Error saving contribution set:', error);
-      this.toast.error(error.message || 'Error saving contribution set.');
+      this.toastService.error(error.message || 'Error saving contribution set.');
     } finally {
       this.isSaving.set(false);
     }
@@ -274,7 +163,7 @@ export class RuleConfigComponent {
   openManageRules(contribution: Contribution) {
     this.activeContribution.set(contribution);
     this.showStrategyForm.set(false);
-    this.modal.open({
+    this.modalService.open({
       title: `Strategies: ${contribution.name}`,
       side: 'right',
       size: 'xl',
@@ -324,23 +213,23 @@ export class RuleConfigComponent {
         updatedRules.push(ruleStrategy as any);
       }
 
-      await this.firestore.updateDocument('contributions', contribution.id!, {
+      await this.firestoreService.updateDocument('contributions', contribution.id!, {
         rules: updatedRules,
       });
 
       this.activeContribution.set({ ...contribution, rules: updatedRules });
       this.showStrategyForm.set(false);
-      this.toast.success('Rule strategy saved successfully.');
+      this.toastService.success('Rule strategy saved successfully.');
     } catch (error: any) {
       console.error('Error saving rule strategy:', error);
-      this.toast.error(error.message || 'Error saving rule strategy.');
+      this.toastService.error(error.message || 'Error saving rule strategy.');
     } finally {
       this.isSaving.set(false);
     }
   }
 
   async removeStrategy(ruleIndex: number) {
-    this.modal.confirm({
+    this.modalService.confirm({
       title: 'Remove strategy',
       message: 'Are you sure you want to remove this rule strategy?',
       confirmBtnClass: 'btn-danger',
@@ -349,7 +238,7 @@ export class RuleConfigComponent {
         const updatedRules = [...contribution.rules];
         updatedRules.splice(ruleIndex, 1);
 
-        await this.firestore.updateDocument('contributions', contribution.id!, {
+        await this.firestoreService.updateDocument('contributions', contribution.id!, {
           rules: updatedRules,
         });
         this.activeContribution.set({ ...contribution, rules: updatedRules });
@@ -358,7 +247,7 @@ export class RuleConfigComponent {
   }
 
   requestDelete(contributionId: string) {
-    this.modal.confirm({
+    this.modalService.confirm({
       title: 'Archive set',
       message:
         'Archiving this contribution set removes it from the active payroll processor immediately.',
@@ -369,11 +258,11 @@ export class RuleConfigComponent {
   }
 
   async confirmDelete(contributionId: string) {
-    await this.firestore.deleteDocument('contributions', contributionId);
+    await this.firestoreService.deleteDocument('contributions', contributionId);
   }
 
   closeModal() {
-    this.modal.close();
+    this.modalService.close();
   }
 
   getFlagUrl(countryCode: string | null | undefined) {
