@@ -15,6 +15,7 @@ export interface Slab {
   calculationType: CalculationType;
   rateOrAmount: number;
   calculationBasisFieldId: string;
+  hasContributionCap: boolean;
   contributionCap: number;
 }
 

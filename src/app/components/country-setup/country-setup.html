@@ -5,9 +5,16 @@
       <h1 class="page-title">Country Studio</h1>
       <p class="page-description">Configure regional payroll schemas, core contribution fields, and registry settings for new jurisdictions.</p>
     </div>
-    <div class="page-stats">
-      <span class="stat-label">Active Schemas</span>
-      <strong class="stat-value">{{ (countries$ | async)?.length || 0 }}</strong>
+    <div class="header-actions">
+      <input type="file" #bulkFileInput (change)="onBulkFileSelected($event)" accept=".xlsx, .xls" style="display: none;">
+      <button class="btn btn-secondary" (click)="downloadGlobalTemplate()">
+        <app-icon-download [size]="18" class="mr-xs"></app-icon-download>
+        Download Global Template
+      </button>
+      <button class="btn btn-secondary" (click)="bulkFileInput.click()" [disabled]="isImporting()">
+        <app-icon-upload [size]="18" class="mr-xs"></app-icon-upload>
+        {{ isImporting() ? 'Importing...' : 'Global Bulk Import' }}
+      </button>
     </div>
   </header>
 
